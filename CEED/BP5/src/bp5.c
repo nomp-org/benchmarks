@@ -1,5 +1,5 @@
-#include <getopt.h>
 #include <bp5-impl.h>
+#include <getopt.h>
 
 // Dynamic memory free function.
 void bp5_free_(void **p) { free(*p), *p = NULL; }

@@ -1,10 +1,10 @@
 #if !defined(__LIBBP5_IMPL_H__)
 #define __LIBBP5_IMPL_H__
 
+#include <bp5.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <bp5.h>
 
 #ifdef __cplusplus
 extern "C" {
