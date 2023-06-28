@@ -11,7 +11,6 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(CMAKE_C_STANDARD 11)
 
 set(SOURCES src/bp5.c src/bp5-gs.c)
-
 add_library(bp5 SHARED ${SOURCES})
 set_target_properties(bp5 PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
   PUBLIC_HEADER src/bp5.h)
@@ -20,11 +19,11 @@ target_compile_options(bp5 PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>)
 
-add_executable(drive bin/drive.c)
-set_target_properties(drive PROPERTIES VERSION ${PROJECT_VERSION})
-target_link_libraries(drive PRIVATE bp5)
-target_include_directories(drive PRIVATE src)
-target_compile_options(drive PRIVATE
+add_executable(bp5_driver bin/bp5.c)
+set_target_properties(bp5_driver PROPERTIES VERSION ${PROJECT_VERSION})
+target_link_libraries(bp5_driver PRIVATE bp5)
+target_include_directories(bp5_driver PRIVATE src)
+target_compile_options(bp5_driver PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>)
 
@@ -36,6 +35,6 @@ if (CLANG_FORMAT)
     COMMENT "Running clang-format ...")
 endif()
 
-install(TARGETS bp5 drive RUNTIME DESTINATION bin LIBRARY DESTINATION lib
+install(TARGETS bp5 bp5_driver RUNTIME DESTINATION bin LIBRARY DESTINATION lib
   PUBLIC_HEADER DESTINATION include
 )

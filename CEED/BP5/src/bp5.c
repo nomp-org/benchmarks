@@ -10,12 +10,12 @@ static void print_help(const char *name) {
   printf("Usage: %s [OPTIONS]\n", name);
   printf("Options:\n");
   printf("  --bp5-verbose=<verbose level>, Verbose level (0, 1, 2, ...).\n");
-  printf("  --bp5-nelt <# of elements>, Number of elements. (1, 2, 3, ...)\n");
-  printf("  --bp5-order <order>, Polynomial order. (1, 2, 3, ...)\n");
+  printf("  --bp5-nelt <# of elements>, Number of elements (1, 2, 3, ...).\n");
+  printf("  --bp5-order <order>, Polynomial order (1, 2, 3, ...).\n");
   printf("  --bp5-help, Prints this help message and exit.\n");
 }
 
-static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_in) {
+static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
   bp5->verbose = 0;
 
   static struct option long_options[] = {
@@ -25,7 +25,7 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_in) {
       {"bp5-help", no_argument, 0, 99},
       {0, 0, 0, 0}};
 
-  char **argv = *argv_in;
+  char **argv = *argv_;
   for (;;) {
     int c = getopt_long(*argc, argv, "", long_options, NULL);
     if (c == -1)
