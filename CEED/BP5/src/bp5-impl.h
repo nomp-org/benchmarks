@@ -19,6 +19,10 @@ struct bp5_t {
   uint nelt, nx1, verbose;
   // Internal data structure for gather-scatter.
   uint gs_n, *gs_off, *gs_idx;
+  // Quadrature points and weights.
+  scalar *z, *w;
+  // Geometric factors array.
+  scalar *g;
 };
 
 // Dynamic memory allocation function.
@@ -27,6 +31,12 @@ struct bp5_t {
 // Dynamic memory deallocation function.
 void bp5_free_(void **p);
 #define bp5_free(p) bp5_free_((void **)p)
+
+// Gather-scatter setup.
+void bp5_gs_setup(struct bp5_t *bp5);
+
+// Setup geometric factors.
+void bp5_geom_setup(struct bp5_t *bp5);
 
 #ifdef __cplusplus
 }

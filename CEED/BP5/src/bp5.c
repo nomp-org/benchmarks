@@ -1,8 +1,6 @@
 #include <bp5-impl.h>
 #include <getopt.h>
 
-extern void bp5_gs_setup(struct bp5_t *bp5);
-
 // Dynamic memory free function.
 void bp5_free_(void **p) { free(*p), *p = NULL; }
 
@@ -39,7 +37,7 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       bp5->nelt = atoi(optarg);
       break;
     case 22:
-      bp5->nx1 = atoi(optarg);
+      bp5->nx1 = atoi(optarg) + 1;
       break;
     case 99:
       print_help(argv[0]);
@@ -64,10 +62,10 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
 
 struct bp5_t *bp5_init(int *argc, char ***argv_in) {
   struct bp5_t *bp5 = bp5_calloc(struct bp5_t, 1);
-
   bp5_parse_opts(bp5, argc, argv_in);
 
   bp5_gs_setup(bp5);
+  bp5_geom_setup(bp5);
 
   return bp5;
 }
@@ -80,10 +78,18 @@ void bp5_debug(int verbose, const char *fmt, ...) {
   va_end(args);
 }
 
+void bp5_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vfprintf(stderr, fmt, args);
+  va_end(args);
+  exit(EXIT_FAILURE);
+}
+
 void bp5_assert_(int cond, const char *msg, const char *file,
                  const unsigned line) {
   if (!cond) {
-    printf("%s:%d Assertion failure: %s", file, line, msg);
+    fprintf(stderr, "%s:%d Assertion failure: %s", file, line, msg);
     exit(EXIT_FAILURE);
   }
 }
@@ -93,12 +99,14 @@ void bp5_finalize(struct bp5_t **bp5_) {
     return;
 
   struct bp5_t *bp5 = *bp5_;
-  bp5_debug(bp5->verbose, "bp5_finalize: Finalizing BP5.\n");
+  bp5_debug(bp5->verbose, "bp5_finalize: ...");
 
-  if (bp5->gs_n > 0) {
-    bp5_free(&bp5->gs_off);
-    bp5_free(&bp5->gs_idx);
-  }
+  bp5_free(&bp5->gs_off);
+  bp5_free(&bp5->gs_idx);
+  bp5_free(&bp5->g);
 
+  int verbose = bp5->verbose;
   bp5_free(bp5_);
+
+  bp5_debug(verbose, "done.\n");
 }

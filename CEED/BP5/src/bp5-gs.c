@@ -5,6 +5,13 @@ struct dof_t {
   uint idx;
 };
 
+static inline ulong get_local_dofs(const struct bp5_t *bp5) {
+  const uint nx1 = bp5->nx1, nx3 = nx1 * nx1 * nx1;
+  ulong ndof = bp5->nelt;
+  ndof *= nx3;
+  return ndof;
+}
+
 static int cmp_dof_t(const void *a, const void *b) {
   const struct dof_t *pa = (const struct dof_t *)a;
   const struct dof_t *pb = (const struct dof_t *)b;
@@ -43,8 +50,7 @@ void bp5_gs_setup(struct bp5_t *bp5) {
   // Number the dofs based on the element location in x, y and z and the
   // polynomial order.
   const uint nx1 = bp5->nx1, p = nx1 - 1;
-  const uint nx3 = nx1 * nx1 * nx1;
-  const ulong ndof = nelt * nx3;
+  const ulong ndof = get_local_dofs(bp5);
   slong *glo_num = bp5_calloc(slong, ndof);
   uint d = 0;
   for (uint e = 0; e < nelt; e++) {
@@ -101,6 +107,46 @@ void bp5_gs_setup(struct bp5_t *bp5) {
   }
 
   bp5_free(&glo_num);
+
+  bp5_debug(bp5->verbose, "done.\n");
+}
+
+void bp5_geom_setup(struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_geom_setup: ...");
+
+  FILE *fp = fopen("zwgll.txt", "r");
+  if (!fp)
+    bp5_error("bp5_geom_setup: zwgll.txt not found.\n");
+
+  size_t offset = 0;
+  for (uint lines = 2; lines < bp5->nx1; lines++)
+    offset += lines;
+
+  char buf[BUFSIZ];
+  for (uint i = 0; i < offset; i++) {
+    if (!fgets(buf, BUFSIZ, fp))
+      bp5_error("bp5_geom_setup: Order %u too large.\n", bp5->nx1 - 1);
+  }
+
+  bp5->z = bp5_calloc(scalar, bp5->nx1);
+  bp5->w = bp5_calloc(scalar, bp5->nx1);
+  for (uint i = 0; i < bp5->nx1; i++) {
+    fgets(buf, BUFSIZ, fp);
+    sscanf(buf, "%lf %lf", &bp5->z[i], &bp5->w[i]);
+  }
+
+  fclose(fp);
+
+  uint dof = 0;
+  bp5->g = bp5_calloc(scalar, get_local_dofs(bp5));
+  for (uint e = 0; e < bp5->nelt; e++) {
+    for (uint i = 0; i < bp5->nx1; i++) {
+      for (uint j = 0; j < bp5->nx1; j++) {
+        for (uint k = 0; k < bp5->nx1; k++)
+          bp5->g[dof++] = bp5->w[i] * bp5->w[j] * bp5->w[k];
+      }
+    }
+  }
 
   bp5_debug(bp5->verbose, "done.\n");
 }
