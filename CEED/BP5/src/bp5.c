@@ -67,10 +67,11 @@ struct bp5_t *bp5_init(int *argc, char ***argv_in) {
 
   bp5_parse_opts(bp5, argc, argv_in);
 
+  bp5_gs_setup(bp5);
+
   return bp5;
 }
 
-void bp5_finalize(struct bp5_t **bp5) { bp5_free(bp5); }
 void bp5_debug(int verbose, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -85,4 +86,19 @@ void bp5_assert_(int cond, const char *msg, const char *file,
     printf("%s:%d Assertion failure: %s", file, line, msg);
     exit(EXIT_FAILURE);
   }
+}
+
+void bp5_finalize(struct bp5_t **bp5_) {
+  if (!bp5_ || !*bp5_)
+    return;
+
+  struct bp5_t *bp5 = *bp5_;
+  bp5_debug(bp5->verbose, "bp5_finalize: Finalizing BP5.\n");
+
+  if (bp5->gs_n > 0) {
+    bp5_free(&bp5->gs_off);
+    bp5_free(&bp5->gs_idx);
+  }
+
+  bp5_free(bp5_);
 }

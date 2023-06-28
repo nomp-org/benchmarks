@@ -1,7 +1,10 @@
 #if !defined(__LIBBP5_IMPL_H__)
 #define __LIBBP5_IMPL_H__
 
-#include <bp5.h>
+#include "bp5-types.h"
+#include "bp5.h"
+#include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -10,8 +13,12 @@
 extern "C" {
 #endif
 
+// BP5 internal data structure.
 struct bp5_t {
-  unsigned verbose;
+  // User input to define problem size and verbosity.
+  uint nelt, nx1, verbose;
+  // Internal data structure for gather-scatter.
+  uint gs_n, *gs_off, *gs_idx;
 };
 
 // Dynamic memory allocation function.
