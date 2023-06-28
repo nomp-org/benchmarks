@@ -15,7 +15,7 @@ struct bp5_t {
 };
 
 // Dynamic memory allocation function.
-#define bp5_calloc(T, n) (T *)calloc(n, sizeof(T))
+#define bp5_calloc(T, n) ((T *)calloc(n, sizeof(T)))
 
 // Dynamic memory deallocation function.
 void bp5_free_(void **p);
