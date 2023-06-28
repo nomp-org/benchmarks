@@ -23,6 +23,8 @@ struct bp5_t {
   scalar *z, *w;
   // Geometric factors array.
   scalar *g;
+  // Derivative matrix.
+  scalar *D;
 };
 
 // Dynamic memory allocation function.
@@ -35,8 +37,14 @@ void bp5_free_(void **p);
 // Gather-scatter setup.
 void bp5_gs_setup(struct bp5_t *bp5);
 
+// Read quadrature points and weights.
+void bp5_read_zwgll(struct bp5_t *bp5);
+
 // Setup geometric factors.
 void bp5_geom_setup(struct bp5_t *bp5);
+
+// Setup derivative matrix.
+void bp5_derivative_setup(struct bp5_t *bp5);
 
 #ifdef __cplusplus
 }

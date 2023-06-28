@@ -10,7 +10,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(CMAKE_C_STANDARD 11)
 
-set(SOURCES src/bp5.c src/bp5-gs.c)
+set(SOURCES src/bp5.c src/bp5-setup.c)
 add_library(bp5 SHARED ${SOURCES})
 set_target_properties(bp5 PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
   PUBLIC_HEADER src/bp5.h)

@@ -1,6 +1,8 @@
 #if !defined(__LIBBP5_TYPES_H__)
 #define __LIBBP5_TYPES_H__
 
+#include <stdint.h>
+
 #define scalar double
 #define ulong uint64_t
 #define uint uint32_t

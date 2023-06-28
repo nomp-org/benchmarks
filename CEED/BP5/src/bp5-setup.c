@@ -111,12 +111,12 @@ void bp5_gs_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "done.\n");
 }
 
-void bp5_geom_setup(struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_geom_setup: ...");
+void bp5_read_zwgll(struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_read_zwgll: ...");
 
-  FILE *fp = fopen("zwgll.txt", "r");
+  FILE *fp = fopen("data/zwgll.dat", "r");
   if (!fp)
-    bp5_error("bp5_geom_setup: zwgll.txt not found.\n");
+    bp5_error("bp5_geom_setup: zwgll.dat not found.\n");
 
   size_t offset = 0;
   for (uint lines = 2; lines < bp5->nx1; lines++)
@@ -137,6 +137,12 @@ void bp5_geom_setup(struct bp5_t *bp5) {
 
   fclose(fp);
 
+  bp5_debug(bp5->verbose, "done.\n");
+}
+
+void bp5_geom_setup(struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_geom_setup: ...");
+
   uint dof = 0;
   bp5->g = bp5_calloc(scalar, get_local_dofs(bp5));
   for (uint e = 0; e < bp5->nelt; e++) {
@@ -147,6 +153,45 @@ void bp5_geom_setup(struct bp5_t *bp5) {
       }
     }
   }
+
+  bp5_debug(bp5->verbose, "done.\n");
+}
+
+void bp5_derivative_setup(struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_derivative_setup: ...");
+
+  uint nx1 = bp5->nx1;
+  scalar *z = bp5->z;
+  scalar *a = bp5_calloc(scalar, nx1);
+  for (uint i = 0; i < nx1; i++) {
+    a[i] = 1;
+    for (uint j = 0; j < i; j++)
+      a[i] = a[i] * (z[i] - z[j]);
+    for (uint j = i + 1; j < nx1; j++)
+      a[i] = a[i] * (z[i] - z[j]);
+    a[i] = 1 / a[i];
+  }
+
+  scalar *D = bp5->D = bp5_calloc(scalar, nx1 * nx1);
+  uint k = 0;
+  for (uint j = 0; j < nx1; j++) {
+    for (uint i = 0; i < nx1; i++) {
+      D[k] = 0;
+      if (i != j)
+        D[k] = a[j] / (a[i] * (z[i] - z[j]));
+      k++;
+    }
+  }
+
+  for (uint i = 0; i < nx1; i++) {
+    k = i;
+    scalar sum = 0;
+    for (uint j = 0; j < nx1; j++, k += nx1)
+      sum = sum + D[k];
+    D[i + nx1 * i] = -sum;
+  }
+
+  bp5_free(&a);
 
   bp5_debug(bp5->verbose, "done.\n");
 }
