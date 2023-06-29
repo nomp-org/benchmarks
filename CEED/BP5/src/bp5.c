@@ -1,4 +1,4 @@
-#include <bp5-impl.h>
+#include "bp5-impl.h"
 #include <getopt.h>
 
 // Dynamic memory free function.
@@ -68,6 +68,7 @@ struct bp5_t *bp5_init(int *argc, char ***argv) {
   bp5_read_zwgll(bp5);
   bp5_geom_setup(bp5);
   bp5_derivative_setup(bp5);
+  bp5_inverse_multiplicity_setup(bp5);
 
   return bp5;
 }
@@ -109,6 +110,7 @@ void bp5_finalize(struct bp5_t **bp5_) {
   bp5_free(&bp5->w);
   bp5_free(&bp5->z);
   bp5_free(&bp5->D);
+  bp5_free(&bp5->c);
 
   int verbose = bp5->verbose;
   bp5_free(bp5_);

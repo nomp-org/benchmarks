@@ -25,6 +25,8 @@ struct bp5_t {
   scalar *g;
   // Derivative matrix.
   scalar *D;
+  // Inverse multiplicity of each DOF.
+  scalar *c;
 };
 
 // Dynamic memory allocation function.
@@ -45,6 +47,9 @@ void bp5_geom_setup(struct bp5_t *bp5);
 
 // Setup derivative matrix.
 void bp5_derivative_setup(struct bp5_t *bp5);
+
+// Setup inverse multiplicity.
+void bp5_inverse_multiplicity_setup(struct bp5_t *bp5);
 
 #ifdef __cplusplus
 }
