@@ -1,5 +1,7 @@
 #include "bp5-impl.h"
+#include <ctype.h>
 #include <getopt.h>
+#include <string.h>
 
 // Dynamic memory free function.
 void bp5_free_(void **p) { free(*p), *p = NULL; }
@@ -10,18 +12,33 @@ static void print_help(const char *name) {
   printf("  --bp5-verbose=<verbose level>, Verbose level (0, 1, 2, ...).\n");
   printf("  --bp5-nelt <# of elements>, Number of elements (1, 2, 3, ...).\n");
   printf("  --bp5-order <order>, Polynomial order (1, 2, 3, ...).\n");
+  printf("  --bp5-niter=<niter>, Number of CG iterations (1, 2, 3, ...).\n");
+  printf("  --bp5-backend <backend>, Backend (CUDA, OpenCL, nomp, etc.).\n");
   printf("  --bp5-help, Prints this help message and exit.\n");
 }
 
-static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
-  bp5->verbose = 0;
+static void inline set_backend(struct bp5_t *bp5, const char *backend) {
+  size_t len = strnlen(backend, BUFSIZ);
+  for (uint i = 0; i < len; i++)
+    bp5->backend[i] = toupper(backend[i]);
+}
 
+static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
   static struct option long_options[] = {
       {"bp5-verbose", optional_argument, 0, 10},
       {"bp5-nelt", required_argument, 0, 20},
       {"bp5-order", required_argument, 0, 22},
+      {"bp5-niter", optional_argument, 0, 24},
+      {"bp5-backend", required_argument, 0, 40},
       {"bp5-help", no_argument, 0, 99},
       {0, 0, 0, 0}};
+
+  // Default values for optional arguments.
+  bp5->verbose = 0, bp5->niter = 100;
+  // Set invalid values for required arguments so we can check if they were
+  // initialized later.
+  bp5->nelt = -1, bp5->nx1 = -1;
+  bp5->backend[0] = '\0';
 
   char **argv = *argv_;
   for (;;) {
@@ -38,6 +55,12 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       break;
     case 22:
       bp5->nx1 = atoi(optarg) + 1;
+      break;
+    case 24:
+      bp5->niter = atoi(optarg);
+      break;
+    case 40:
+      set_backend(bp5, optarg);
       break;
     case 99:
       print_help(argv[0]);
@@ -61,9 +84,13 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
 }
 
 struct bp5_t *bp5_init(int *argc, char ***argv) {
+  // Register available GPU backends.
+  bp5_register_backends();
+
   struct bp5_t *bp5 = bp5_calloc(struct bp5_t, 1);
   bp5_parse_opts(bp5, argc, argv);
 
+  // Setup the problem data on host.
   bp5_gs_setup(bp5);
   bp5_read_zwgll(bp5);
   bp5_geom_setup(bp5);

@@ -116,7 +116,7 @@ void bp5_read_zwgll(struct bp5_t *bp5) {
 
   FILE *fp = fopen("data/zwgll.dat", "r");
   if (!fp)
-    bp5_error("bp5_geom_setup: zwgll.dat not found.\n");
+    bp5_error("bp5_read_zwgll: zwgll.dat not found.\n");
 
   size_t offset = 0;
   for (uint lines = 2; lines < bp5->nx1; lines++)
@@ -125,7 +125,7 @@ void bp5_read_zwgll(struct bp5_t *bp5) {
   char buf[BUFSIZ];
   for (uint i = 0; i < offset; i++) {
     if (!fgets(buf, BUFSIZ, fp))
-      bp5_error("bp5_geom_setup: Order %u too large.\n", bp5->nx1 - 1);
+      bp5_error("bp5_read_zwgll: Order %u too large.\n", bp5->nx1 - 1);
   }
 
   bp5->z = bp5_calloc(scalar, bp5->nx1);
