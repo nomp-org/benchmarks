@@ -19,7 +19,8 @@ BP5_INTERN void bp5_free_(void **p);
 // BP5 internal data structure.
 struct bp5_t {
   // User input to define problem size and verbosity.
-  uint nelt, nx1, verbose, niter;
+  sint nelt, nx1;
+  uint verbose, max_iter, device_id;
   char backend[BUFSIZ];
   // Internal data structure for gather-scatter.
   uint gs_n, *gs_off, *gs_idx;

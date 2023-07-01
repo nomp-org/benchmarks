@@ -11,8 +11,8 @@ static void print_help(const char *name) {
   printf("Options:\n");
   printf("  --bp5-verbose=<verbose level>, Verbose level (0, 1, 2, ...).\n");
   printf("  --bp5-nelt <# of elements>, Number of elements (1, 2, 3, ...).\n");
-  printf("  --bp5-order <order>, Polynomial order (1, 2, 3, ...).\n");
-  printf("  --bp5-niter=<niter>, Number of CG iterations (1, 2, 3, ...).\n");
+  printf("  --bp5-nx1 <order>, Polynomial order (1, 2, 3, ...).\n");
+  printf("  --bp5-max-iter=<iters>, Number of CG iterations (1, 2, 3, ...).\n");
   printf("  --bp5-backend <backend>, Backend (CUDA, OpenCL, nomp, etc.).\n");
   printf("  --bp5-help, Prints this help message and exit.\n");
 }
@@ -27,14 +27,15 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
   static struct option long_options[] = {
       {"bp5-verbose", optional_argument, 0, 10},
       {"bp5-nelt", required_argument, 0, 20},
-      {"bp5-order", required_argument, 0, 22},
-      {"bp5-niter", optional_argument, 0, 24},
+      {"bp5-nx1", required_argument, 0, 22},
+      {"bp5-max-iter", optional_argument, 0, 24},
       {"bp5-backend", required_argument, 0, 40},
       {"bp5-help", no_argument, 0, 99},
       {0, 0, 0, 0}};
 
   // Default values for optional arguments.
-  bp5->verbose = 0, bp5->niter = 100;
+  bp5->verbose = 0, bp5->max_iter = 1000, bp5->device_id = 0;
+
   // Set invalid values for required arguments so we can check if they were
   // initialized later.
   bp5->nelt = -1, bp5->nx1 = -1;
@@ -57,7 +58,7 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       bp5->nx1 = atoi(optarg) + 1;
       break;
     case 24:
-      bp5->niter = atoi(optarg);
+      bp5->max_iter = atoi(optarg);
       break;
     case 40:
       set_backend(bp5, optarg);
@@ -72,6 +73,14 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       break;
     }
   }
+
+  // Check if the required arguments were provided.
+  if (bp5->nelt < 1)
+    bp5_error("bp5_parse_opts: --bp5-nelt is not provided or invalid.\n");
+  if (bp5->nx1 < 2)
+    bp5_error("bp5_parse_opts: --bp5-nx1 is not provided or invalid.\n");
+  if (strnlen(bp5->backend, BUFSIZ) == 0)
+    bp5_error("bp5_parse_opts: --bp5-backend is not provided.\n");
 
   // Remove parsed arguments from argv. We just need to update the pointers
   // since command line arguments are not transient and available until the

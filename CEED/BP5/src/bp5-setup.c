@@ -119,18 +119,19 @@ void bp5_read_zwgll(struct bp5_t *bp5) {
     bp5_error("bp5_read_zwgll: zwgll.dat not found.\n");
 
   size_t offset = 0;
-  for (uint lines = 2; lines < bp5->nx1; lines++)
+  const uint nx1 = bp5->nx1;
+  for (uint lines = 2; lines < nx1; lines++)
     offset += lines;
 
   char buf[BUFSIZ];
   for (uint i = 0; i < offset; i++) {
     if (!fgets(buf, BUFSIZ, fp))
-      bp5_error("bp5_read_zwgll: Order %u too large.\n", bp5->nx1 - 1);
+      bp5_error("bp5_read_zwgll: Order %u too large.\n", nx1 - 1);
   }
 
-  bp5->z = bp5_calloc(scalar, bp5->nx1);
-  bp5->w = bp5_calloc(scalar, bp5->nx1);
-  for (uint i = 0; i < bp5->nx1; i++) {
+  bp5->z = bp5_calloc(scalar, nx1);
+  bp5->w = bp5_calloc(scalar, nx1);
+  for (uint i = 0; i < nx1; i++) {
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%lf %lf", &bp5->z[i], &bp5->w[i]);
   }
@@ -143,12 +144,13 @@ void bp5_read_zwgll(struct bp5_t *bp5) {
 void bp5_geom_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_geom_setup: ...");
 
+  const uint nx1 = bp5->nx1, nelt = bp5->nelt;
   uint dof = 0;
   bp5->g = bp5_calloc(scalar, get_local_dofs(bp5));
-  for (uint e = 0; e < bp5->nelt; e++) {
-    for (uint i = 0; i < bp5->nx1; i++) {
-      for (uint j = 0; j < bp5->nx1; j++) {
-        for (uint k = 0; k < bp5->nx1; k++)
+  for (uint e = 0; e < nelt; e++) {
+    for (uint i = 0; i < nx1; i++) {
+      for (uint j = 0; j < nx1; j++) {
+        for (uint k = 0; k < nx1; k++)
           bp5->g[dof++] = bp5->w[i] * bp5->w[j] * bp5->w[k];
       }
     }
