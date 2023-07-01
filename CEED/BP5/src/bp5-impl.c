@@ -90,6 +90,9 @@ struct bp5_t *bp5_init(int *argc, char ***argv) {
   struct bp5_t *bp5 = bp5_calloc(struct bp5_t, 1);
   bp5_parse_opts(bp5, argc, argv);
 
+  // Initialize the backend.
+  bp5_init_backend(bp5);
+
   // Setup the problem data on host.
   bp5_gs_setup(bp5);
   bp5_read_zwgll(bp5);
