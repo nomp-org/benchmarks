@@ -15,8 +15,8 @@ option(ENABLE_OPENCL "Build OPENCL backend" ON)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
 option(ENABLE_HIP "Build HIP backend" OFF)
 
-set(SOURCES src/bp5.c src/bp5-setup.c backends/bp5-backend-register.c
-  backends/bp5-backend-register-dummy.c backends/bp5-backend-nomp.c)
+set(SOURCES src/bp5-impl.c src/bp5-setup.c backends/bp5-backend.c
+  backends/bp5-backend-dummy.c backends/bp5-backend-nomp.c)
 
 if (ENABLE_OPENCL)
   find_package(OpenCL REQUIRED)
@@ -53,7 +53,7 @@ target_compile_options(bp5 PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>)
 
-add_executable(bp5-driver bin/bp5.c)
+add_executable(bp5-driver bin/bp5-driver.c)
 set_target_properties(bp5-driver PROPERTIES VERSION ${PROJECT_VERSION})
 target_link_libraries(bp5-driver PRIVATE bp5)
 target_include_directories(bp5-driver PRIVATE include)
