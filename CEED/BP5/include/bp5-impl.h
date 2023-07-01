@@ -40,6 +40,9 @@ BP5_INTERN void bp5_register_backend(const char *name, int (*initialize)(int),
 // Register GPU backends.
 BP5_INTERN void bp5_register_backends(void);
 
+// Un-register GPU backends.
+BP5_INTERN void bp5_unregister_backends(void);
+
 // Gather-scatter setup.
 BP5_INTERN void bp5_gs_setup(struct bp5_t *bp5);
 

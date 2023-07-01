@@ -36,3 +36,9 @@ void bp5_register_backends(void) {
 #include "bp5-backend-list.h"
 #undef BP5_BACKEND
 }
+
+void bp5_unregister_backends(void) {
+  for (uint i = 0; i < backends_count; i++)
+    bp5_free(&backends[i]);
+  backends_count = 0;
+}

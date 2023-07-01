@@ -131,6 +131,8 @@ void bp5_finalize(struct bp5_t **bp5_) {
   struct bp5_t *bp5 = *bp5_;
   bp5_debug(bp5->verbose, "bp5_finalize: ...");
 
+  bp5_unregister_backends();
+
   bp5_free(&bp5->gs_off);
   bp5_free(&bp5->gs_idx);
   bp5_free(&bp5->g);
