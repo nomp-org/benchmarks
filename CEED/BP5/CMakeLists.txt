@@ -11,7 +11,7 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-option(ENABLE_OPENCL "Build OPENCL backend" ON)
+option(ENABLE_OPENCL "Build OPENCL backend" OFF)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
 option(ENABLE_HIP "Build HIP backend" OFF)
 
@@ -29,8 +29,9 @@ endif()
 
 if (ENABLE_CUDA)
   find_package(CUDAToolkit REQUIRED)
-  if (CUDA_FOUND)
-    list(APPEND SOURCES backends/bp5-backend-cuda.c)
+  if (CUDAToolkit_FOUND)
+    enable_language(CUDA)
+    list(APPEND SOURCES backends/bp5-backend-cuda.cu)
   else()
     message(FATAL_ERROR "ENABLE_CUDA is ON but unable to find CUDA.")
   endif()
@@ -51,7 +52,11 @@ set_target_properties(bp5 PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
 target_include_directories(bp5 PRIVATE include)
 target_compile_options(bp5 PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>)
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>)
+# Add -Wpedantic if compiler is not MSVC and language CUDA is not enabled.
+target_compile_options(bp5 PRIVATE
+  $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:-Wpedantic>)
+target_link_libraries(bp5 PRIVATE m)
 
 if (ENABLE_OPENCL)
   target_link_libraries(bp5 PRIVATE OpenCL::OpenCL)
@@ -72,7 +77,10 @@ target_link_libraries(bp5-driver PRIVATE bp5)
 target_include_directories(bp5-driver PRIVATE include)
 target_compile_options(bp5-driver PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>)
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>)
+# Add -Wpedantic if compiler is not MSVC and language CUDA is not enabled.
+target_compile_options(bp5-driver PRIVATE
+  $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:-Wpedantic>)
 
 find_program(CLANG_FORMAT NAMES clang-format)
 if (CLANG_FORMAT)

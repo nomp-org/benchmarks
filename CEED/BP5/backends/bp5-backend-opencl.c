@@ -44,7 +44,7 @@ static void opencl_init_device(const struct bp5_t *bp5) {
   cl_uint num_devices = 0;
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices),
         "clGetDeviceIDs");
-  if (bp5->device_id < 0 || bp5->device_id >= num_devices)
+  if (bp5->device_id >= num_devices)
     bp5_error("opencl_init: Device ID is invalid: %d", bp5->device_id);
 
   cl_device_id *cl_devices = bp5_calloc(cl_device_id, num_devices);
@@ -146,19 +146,19 @@ static const size_t local_size = 512;
 
 static void opencl_init_kernels(const uint verbose) {
   bp5_debug(verbose, "opencl_init_kernels: Read kernel source ...");
-  // Read OpenCL kernel source. FIXME: Don't hardcode path.
-  FILE *fp = fopen("backends/bp5-backend-opencl.cl", "r");
+  // FIXME: Don't hardcode path for the kernel file.
+  FILE *fp = fopen("./backends/bp5-backend-opencl.cl", "r");
   if (!fp)
     bp5_error("opencl_init_kernels: Failed to open kernel source file.");
+
   fseek(fp, 0, SEEK_END);
   size_t knl_src_size = ftell(fp);
+  char *knl_src = bp5_calloc(char, knl_src_size + 1);
   rewind(fp);
 
-  char *knl_src = bp5_calloc(char, knl_src_size + 1);
   fread(knl_src, sizeof(char), knl_src_size, fp);
-  fclose(fp);
-  // Don't need this but just to be safe.
   knl_src[knl_src_size] = '\0';
+  fclose(fp);
   bp5_debug(verbose, "done.\n");
 
   // Build OpenCL kernels.
@@ -335,9 +335,10 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
   if (!initialized)
     bp5_error("opencl_run: OpenCL backend is not initialized.");
 
-  bp5_debug(bp5->verbose, "opencl_run: ...");
+  bp5_debug(bp5->verbose, "opencl_run: ... ");
 
   clock_t t0 = clock();
+
   // Copy rhs to device buffer r_mem.
   const uint n = bp5_get_local_dofs(bp5);
   check(clEnqueueWriteBuffer(ocl_queue, r_mem, CL_TRUE, 0, n * sizeof(scalar),

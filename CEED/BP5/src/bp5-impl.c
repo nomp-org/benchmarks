@@ -19,7 +19,7 @@ static void print_help(const char *name) {
   printf("  --bp5-help, Prints this help message and exit.\n");
 }
 
-static void inline set_backend(struct bp5_t *bp5, const char *backend) {
+inline static void set_backend(struct bp5_t *bp5, const char *backend) {
   size_t len = strnlen(backend, BUFSIZ);
   for (uint i = 0; i < len; i++)
     bp5->backend[i] = toupper(backend[i]);
