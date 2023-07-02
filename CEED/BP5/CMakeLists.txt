@@ -53,6 +53,19 @@ target_compile_options(bp5 PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>)
 
+if (ENABLE_OPENCL)
+  target_link_libraries(bp5 PRIVATE OpenCL::OpenCL)
+  target_compile_definitions(bp5 PRIVATE OPENCL_ENABLED)
+endif()
+if (ENABLE_CUDA)
+  target_link_libraries(bp5 PRIVATE CUDA::cudart CUDA::nvrtc)
+  target_compile_definitions(bp5 PRIVATE CUDA_ENABLED)
+endif()
+if (ENABLE_HIP)
+  target_link_libraries(bp5 PRIVATE bp5::HIP)
+  target_compile_definitions(bp5 PRIVATE HIP_ENABLED)
+endif()
+
 add_executable(bp5-driver bin/bp5-driver.c)
 set_target_properties(bp5-driver PROPERTIES VERSION ${PROJECT_VERSION})
 target_link_libraries(bp5-driver PRIVATE bp5)

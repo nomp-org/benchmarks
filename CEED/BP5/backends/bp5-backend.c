@@ -7,8 +7,8 @@
 
 struct bp5_backend_t {
   char name[BUFSIZ];
-  void (*initialize)(int);
-  double (*run)(const struct bp5_t *);
+  void (*initialize)(const struct bp5_t *);
+  double (*run)(const struct bp5_t *, const scalar *);
   void (*finalize)(void);
 };
 
@@ -16,8 +16,9 @@ static struct bp5_backend_t **backends = NULL;
 static uint backends_count = 0;
 static uint backends_capacity = 0;
 
-void bp5_register_backend(const char *name, void (*initialize)(int),
-                          double (*run)(const struct bp5_t *),
+void bp5_register_backend(const char *name,
+                          void (*initialize)(const struct bp5_t *),
+                          double (*run)(const struct bp5_t *, const scalar *),
                           void (*finalize)(void)) {
   struct bp5_backend_t *backend = bp5_calloc(struct bp5_backend_t, 1);
   strncpy(backend->name, name, BUFSIZ);
@@ -45,7 +46,7 @@ void bp5_init_backend(const struct bp5_t *bp5) {
 
   for (uint i = 0; i < backends_count; i++) {
     if (strncmp(backends[i]->name, bp5->backend, BUFSIZ) == 0) {
-      backends[i]->initialize(bp5->device_id);
+      backends[i]->initialize(bp5);
       bp5_debug(bp5->verbose, "done.\n");
       return;
     }

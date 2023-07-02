@@ -5,7 +5,7 @@ struct dof_t {
   uint idx;
 };
 
-static inline ulong get_local_dofs(const struct bp5_t *bp5) {
+ulong bp5_get_local_dofs(const struct bp5_t *bp5) {
   const uint nx1 = bp5->nx1, nx3 = nx1 * nx1 * nx1;
   ulong ndof = bp5->nelt;
   ndof *= nx3;
@@ -50,7 +50,7 @@ void bp5_gs_setup(struct bp5_t *bp5) {
   // Number the dofs based on the element location in x, y and z and the
   // polynomial order.
   const uint nx1 = bp5->nx1, p = nx1 - 1;
-  const ulong ndof = get_local_dofs(bp5);
+  const ulong ndof = bp5_get_local_dofs(bp5);
   slong *glo_num = bp5_calloc(slong, ndof);
   uint d = 0;
   for (uint e = 0; e < nelt; e++) {
@@ -146,12 +146,17 @@ void bp5_geom_setup(struct bp5_t *bp5) {
 
   const uint nx1 = bp5->nx1, nelt = bp5->nelt;
   uint dof = 0;
-  bp5->g = bp5_calloc(scalar, get_local_dofs(bp5));
+  bp5->g = bp5_calloc(scalar, 6 * bp5_get_local_dofs(bp5));
   for (uint e = 0; e < nelt; e++) {
     for (uint i = 0; i < nx1; i++) {
       for (uint j = 0; j < nx1; j++) {
-        for (uint k = 0; k < nx1; k++)
-          bp5->g[dof++] = bp5->w[i] * bp5->w[j] * bp5->w[k];
+        for (uint k = 0; k < nx1; k++) {
+          // Set only the diagonal of geometric factors.
+          bp5->g[6 * dof + 0] = bp5->w[i] * bp5->w[j] * bp5->w[k];
+          bp5->g[6 * dof + 3] = bp5->w[i] * bp5->w[j] * bp5->w[k];
+          bp5->g[6 * dof + 5] = bp5->w[i] * bp5->w[j] * bp5->w[k];
+          dof++;
+        }
       }
     }
   }
@@ -211,7 +216,7 @@ static void gs(scalar *c, const struct bp5_t *bp5) {
 void bp5_inverse_multiplicity_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_inverse_multiplicity_setup: ...");
 
-  uint ndof = get_local_dofs(bp5);
+  uint ndof = bp5_get_local_dofs(bp5);
   scalar *c = bp5->c = bp5_calloc(scalar, ndof);
   for (uint i = 0; i < ndof; i++)
     c[i] = 1;
