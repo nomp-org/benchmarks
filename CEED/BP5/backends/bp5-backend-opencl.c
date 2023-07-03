@@ -19,7 +19,6 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error code: %d.";
   }
 
 // OpenCL device, context, queue and program.
-static uint initialized = 0;
 static cl_device_id ocl_device_id;
 static cl_command_queue ocl_queue;
 static cl_context ocl_ctx;
@@ -317,6 +316,8 @@ static void gs(cl_mem *x, cl_mem *gs_off, cl_mem *gs_idx, const uint gs_n) {
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(gs)");
 }
+
+static uint initialized = 0;
 
 static void opencl_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "opencl_init: Initializing OpenCL backend... ");

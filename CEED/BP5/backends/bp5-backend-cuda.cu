@@ -14,8 +14,6 @@ static const char *ERR_STR_CUDA_FAILURE = "Cuda %s failure: %s.";
 #define check_driver(call)                                                     \
   check_error(call, cudaError_t, cudaSuccess, cudaGetErrorName, "driver");
 
-static uint initialized = 0;
-
 static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
 static scalar *d_c, *d_g, *d_D;
 static uint *d_gs_off, *d_gs_idx;
@@ -182,6 +180,8 @@ inline static void gs(scalar *d_v, const uint gs_n) {
   const size_t global_size = (gs_n + local_size - 1) / local_size;
   gs_kernel<<<global_size, local_size>>>(d_v, d_gs_off, d_gs_idx, gs_n);
 }
+
+static uint initialized = 0;
 
 static void cuda_init(const struct bp5_t *bp5) {
   if (initialized)
