@@ -23,7 +23,7 @@ static cl_device_id ocl_device_id;
 static cl_command_queue ocl_queue;
 static cl_context ocl_ctx;
 
-static void opencl_init_device(const struct bp5_t *bp5) {
+static void opencl_device_init(const struct bp5_t *bp5) {
   // Setup OpenCL platform.
   bp5_debug(bp5->verbose, "opencl_init: Initialize platform ...");
   cl_uint num_platforms = 0;
@@ -69,9 +69,11 @@ static void opencl_init_device(const struct bp5_t *bp5) {
 static cl_mem r_mem, x_mem, z_mem, p_mem, w_mem;
 static cl_mem c_mem, g_mem, D_mem;
 static cl_mem gs_off_mem, gs_idx_mem;
+static cl_mem wrk_mem;
+static scalar *wrk;
 
-static void opencl_init_mem(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "opencl_init_mem: Copy problem data to device ...");
+static void opencl_mem_init(const struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "opencl_mem_init: Copy problem data to device ...");
 
   // Allocate device buffers and copy problem data to device.
   ulong dofs = bp5_get_local_dofs(bp5);
@@ -133,6 +135,12 @@ static void opencl_init_mem(const struct bp5_t *bp5) {
                              0, NULL, NULL),
         "clEnqueueWriteBuffer(gs_idx)");
 
+  // Work array.
+  wrk = bp5_calloc(scalar, dofs);
+  wrk_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
+                           NULL, &err);
+  check(err, "clCreateBuffer(wrk)");
+
   bp5_debug(bp5->verbose, "done.\n");
 }
 
@@ -143,12 +151,12 @@ static cl_kernel glsc3_kernel, add2s1_kernel, add2s2_kernel;
 static cl_kernel ax_kernel, gs_kernel;
 static const size_t local_size = 512;
 
-static void opencl_init_kernels(const uint verbose) {
-  bp5_debug(verbose, "opencl_init_kernels: Read kernel source ...");
+static void opencl_kernels_init(const uint verbose) {
+  bp5_debug(verbose, "opencl_kernels_init: Read kernel source ...");
   // FIXME: Don't hardcode path for the kernel file.
   FILE *fp = fopen("./backends/bp5-backend-opencl.cl", "r");
   if (!fp)
-    bp5_error("opencl_init_kernels: Failed to open kernel source file.");
+    bp5_error("opencl_kernels_init: Failed to open kernel source file.");
 
   fseek(fp, 0, SEEK_END);
   size_t knl_src_size = ftell(fp);
@@ -161,7 +169,7 @@ static void opencl_init_kernels(const uint verbose) {
   bp5_debug(verbose, "done.\n");
 
   // Build OpenCL kernels.
-  bp5_debug(verbose, "opencl_init_kernels: Build kernels ...");
+  bp5_debug(verbose, "opencl_kernels_init: Build kernels ...");
   cl_int err;
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
@@ -171,7 +179,7 @@ static void opencl_init_kernels(const uint verbose) {
         "clBuildProgram");
   bp5_debug(verbose, "done.\n");
 
-  bp5_debug(verbose, "opencl_init_kernels: Create kernels ...");
+  bp5_debug(verbose, "opencl_kernels_init: Create kernels ...");
   mask_kernel = clCreateKernel(ocl_program, "mask", &err);
   check(err, "clCreateKernel(mask)");
   zero_kernel = clCreateKernel(ocl_program, "zero", &err);
@@ -324,9 +332,9 @@ static void opencl_init(const struct bp5_t *bp5) {
   if (initialized)
     return;
 
-  opencl_init_device(bp5);
-  opencl_init_kernels(bp5->verbose);
-  opencl_init_mem(bp5);
+  opencl_device_init(bp5);
+  opencl_kernels_init(bp5->verbose);
+  opencl_mem_init(bp5);
 
   initialized = 1;
   bp5_debug(bp5->verbose, "done.\n");
@@ -407,6 +415,8 @@ static void opencl_finalize(void) {
   check(clReleaseMemObject(D_mem), "clReleaseMemObject(D)");
   check(clReleaseMemObject(gs_off_mem), "clReleaseMemObject(gs_off)");
   check(clReleaseMemObject(gs_idx_mem), "clReleaseMemObject(gs_idx)");
+  check(clReleaseMemObject(wrk_mem), "clReleaseMemObject(wrk)");
+  bp5_free(&wrk);
 
   initialized = 0;
 }

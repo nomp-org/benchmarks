@@ -19,8 +19,8 @@ static scalar *d_c, *d_g, *d_D;
 static uint *d_gs_off, *d_gs_idx;
 static scalar *d_wrk, *wrk;
 
-static void cuda_init_mem(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "cuda_init_mem: Copy problem data to device ... ");
+static void cuda_mem_init(const struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "cuda_mem_init: Copy problem data to device ... ");
 
   // Allocate device buffers and copy problem data to device.
   uint dofs = bp5_get_local_dofs(bp5);
@@ -198,7 +198,7 @@ static void cuda_init(const struct bp5_t *bp5) {
   check_driver(cudaSetDeviceFlags(cudaDeviceMapHost));
   check_driver(cudaFree(0));
 
-  cuda_init_mem(bp5);
+  cuda_mem_init(bp5);
 
   initialized = 1;
   bp5_debug(bp5->verbose, "done.\n");
