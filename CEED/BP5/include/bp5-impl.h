@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define BP5_IDX2(i, j) ((i) + nx1 * (j))
+#define BP5_IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))
+
 // Dynamic memory allocation function.
 #define bp5_calloc(T, n) ((T *)calloc(n, sizeof(T)))
 
@@ -52,7 +55,10 @@ BP5_INTERN void bp5_unregister_backends(void);
 // Setup BP5.
 //
 // Get the number of local DOFs.
-BP5_INTERN ulong bp5_get_local_dofs(const struct bp5_t *bp5);
+BP5_INTERN uint bp5_get_local_dofs(const struct bp5_t *bp5);
+
+// Get the number of elements DOFs.
+BP5_INTERN uint bp5_get_elem_dofs(const struct bp5_t *bp5);
 
 // Gather-scatter setup.
 BP5_INTERN void bp5_gs_setup(struct bp5_t *bp5);

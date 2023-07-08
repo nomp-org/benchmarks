@@ -5,10 +5,14 @@ struct dof_t {
   uint idx;
 };
 
-ulong bp5_get_local_dofs(const struct bp5_t *bp5) {
-  const uint nx1 = bp5->nx1, nx3 = nx1 * nx1 * nx1;
-  ulong ndof = bp5->nelt;
-  ndof *= nx3;
+uint bp5_get_elem_dofs(const struct bp5_t *bp5) {
+  const uint nx1 = bp5->nx1;
+  return nx1 * nx1 * nx1;
+}
+
+uint bp5_get_local_dofs(const struct bp5_t *bp5) {
+  uint ndof = bp5->nelt;
+  ndof *= bp5_get_elem_dofs(bp5);
   return ndof;
 }
 

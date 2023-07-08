@@ -5,6 +5,7 @@ static uint initialized = 0;
 static scalar *r, *x, *z, *p, *w;
 static const scalar *c, *g, *D;
 static const uint *gs_off, *gs_idx;
+static scalar *wrk;
 
 static void nomp_mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "nomp_mem_init: Copy problem data to device ... ");
@@ -27,6 +28,10 @@ static void nomp_mem_init(const struct bp5_t *bp5) {
   c = bp5->c, g = bp5->g, D = bp5->D;
   gs_off = bp5->gs_off, gs_idx = bp5->gs_idx;
 #pragma nomp update(to : c [0:dofs], g [0:6 * dofs], D [0:bp5->nx1 * bp5->nx1])
+
+  // Work array on device and host.
+  wrk = bp5_calloc(scalar, 3 * bp5_get_elem_dofs(bp5));
+#pragma nomp update(alloc : wrk [0:3 * bp5_get_elem_dofs(bp5)])
 
   bp5_debug(bp5->verbose, "done.\n");
 }
@@ -85,10 +90,72 @@ inline static void gs(scalar *v, const uint gs_n) {
   }
 }
 
-inline static void ax(scalar *w, const scalar *p, const uint nelt,
-                      const uint nx1) {
-  // TODO: Implement ax_kernel.
-  return;
+inline static void ax(scalar *w, const scalar *u, const scalar *geo,
+                      const scalar *D, const uint nelt, const uint nx1,
+                      const uint ngeo) {
+  scalar *ur = wrk;
+  scalar *us = ur + nx1 * nx1 * nx1;
+  scalar *ut = us + nx1 * nx1 * nx1;
+  for (uint e = 0; e < nelt; e++) {
+    const uint ebase = e * nx1 * nx1 * nx1;
+    for (uint k = 0; k < nx1; k++) {
+      for (uint j = 0; j < nx1; j++) {
+        for (uint i = 0; i < nx1; i++) {
+          ur[BP5_IDX3(i, j, k)] = 0;
+          us[BP5_IDX3(i, j, k)] = 0;
+          ut[BP5_IDX3(i, j, k)] = 0;
+          for (uint l = 0; l < nx1; l++) {
+            ur[BP5_IDX3(i, j, k)] +=
+                D[BP5_IDX2(i, l)] * u[ebase + BP5_IDX3(k, j, l)];
+            us[BP5_IDX3(i, j, k)] +=
+                D[BP5_IDX2(j, l)] * u[ebase + BP5_IDX3(k, l, i)];
+            ut[BP5_IDX3(i, j, k)] +=
+                D[BP5_IDX2(k, l)] * u[ebase + BP5_IDX3(l, j, i)];
+          }
+        }
+      }
+    }
+
+    for (uint k = 0; k < nx1; k++) {
+      for (uint j = 0; j < nx1; j++) {
+        for (uint i = 0; i < nx1; i++) {
+          const uint gbase = ngeo * (ebase + BP5_IDX3(i, j, k));
+          scalar r_G00 = geo[gbase + 0];
+          scalar r_G01 = geo[gbase + 1];
+          scalar r_G02 = geo[gbase + 2];
+          scalar r_G11 = geo[gbase + 3];
+          scalar r_G12 = geo[gbase + 4];
+          scalar r_G22 = geo[gbase + 5];
+          scalar wr = r_G00 * ur[BP5_IDX3(i, j, k)] +
+                      r_G01 * us[BP5_IDX3(i, j, k)] +
+                      r_G02 * ut[BP5_IDX3(i, j, k)];
+          scalar ws = r_G01 * ur[BP5_IDX3(i, j, k)] +
+                      r_G11 * us[BP5_IDX3(i, j, k)] +
+                      r_G12 * ut[BP5_IDX3(i, j, k)];
+          scalar wt = r_G02 * ur[BP5_IDX3(i, j, k)] +
+                      r_G12 * us[BP5_IDX3(i, j, k)] +
+                      r_G22 * ut[BP5_IDX3(i, j, k)];
+          ur[BP5_IDX3(i, j, k)] = wr;
+          us[BP5_IDX3(i, j, k)] = ws;
+          ut[BP5_IDX3(i, j, k)] = wt;
+        }
+      }
+    }
+
+    for (uint k = 0; k < nx1; k++) {
+      for (uint j = 0; j < nx1; j++) {
+        for (uint i = 0; i < nx1; i++) {
+          scalar wo = 0;
+          for (uint l = 0; l < nx1; l++) {
+            wo += D[BP5_IDX2(l, i)] * ur[BP5_IDX3(l, j, k)] +
+                  D[BP5_IDX2(l, j)] * us[BP5_IDX3(i, l, k)] +
+                  D[BP5_IDX2(l, k)] * ut[BP5_IDX3(i, j, l)];
+          }
+          w[ebase + BP5_IDX3(i, j, k)] = wo;
+        }
+      }
+    }
+  }
 }
 
 static void nomp_init(const struct bp5_t *bp5) {
@@ -136,7 +203,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *ri) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, bp5->nelt, bp5->nx1);
+    ax(w, p, g, D, bp5->nelt, bp5->nx1, 6);
     gs(w, bp5->gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
@@ -162,14 +229,21 @@ static void nomp_finalize(void) {
 
 #pragma nomp update(free                                                       \
                     : r [0:dofs], x [0:dofs], z [0:dofs], p [0:dofs],          \
-                      w [0:dofs], c [0:dofs], g [0:6 * dofs], D [0:nx1 * nx1])
+                      w [0:dofs])
   bp5_free(&r);
   bp5_free(&x);
   bp5_free(&z);
   bp5_free(&p);
   bp5_free(&w);
+
+#pragma nomp update(free : c [0:dofs], g [0:6 * dofs], D [0:nx1 * nx1])
+
+#pragma nomp update(free : wrk [0:3 * dofs])
+  bp5_free(&wrk);
+
+  initialized = 0;
 }
 
 BP5_INTERN void bp5_nomp_init(void) {
-  bp5_register_backend("NOMP", nomp_init, NULL, NULL);
+  bp5_register_backend("NOMP", nomp_init, nomp_run, nomp_finalize);
 }
