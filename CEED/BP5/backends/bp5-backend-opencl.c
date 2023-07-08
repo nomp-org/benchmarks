@@ -18,6 +18,79 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error code: %d.";
       bp5_error(ERR_STR_OPENCL_FAILURE, msg, err_);                            \
   }
 
+static const char *knl_src =
+    "#define scalar double                                                 \n"
+    "#define uint uint32_t                                                 \n"
+    "                                                                      \n"
+    "__kernel void mask(__global scalar *v) {                              \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i == 0)                                                         \n"
+    "    v[i] = 0.0;                                                       \n"
+    "}                                                                     \n"
+    "                                                                      \n"
+    "__kernel void zero(__global scalar *v, const uint n) {                \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i < n)                                                          \n"
+    "    v[i] = 0.0;                                                       \n"
+    "}                                                                     \n"
+    "                                                                      \n"
+    "__kernel void copy(__global scalar *dst, __global const scalar *src,  \n"
+    "                   const uint n) {                                    \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i < n)                                                          \n"
+    "    dst[i] = src[i];                                                  \n"
+    "}                                                                     \n"
+    "                                                                      \n"
+    "__kernel void add2s1(__global scalar *a, __global const scalar *b,    \n"
+    "                     const scalar c, const uint n) {                  \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i < n)                                                          \n"
+    "    a[i] += c * a[i] + b[i];                                          \n"
+    "}                                                                     \n"
+    "                                                                      \n"
+    "__kernel void add2s2(__global scalar *a, __global const scalar *b,    \n"
+    "                     const scalar c, const uint n) {                  \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i < n)                                                          \n"
+    "    a[i] += c * b[i];                                                 \n"
+    "}                                                                     \n"
+    "                                                                      \n"
+    "__kernel void glsc3(__global scalar *out,                             \n"
+    "                    __global const scalar *a,                         \n"
+    "                    __global const scalar *b,                         \n"
+    "                    __global cosnt scalar *c,                         \n"
+    "                    __local scalar *s_abc,                            \n"
+    "                    const uint n) {                                   \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i < n)                                                          \n"
+    "    s_abc[i] = a[i] * b[i] * c[i];                                    \n"
+    "  else                                                                \n"
+    "   s_abc[i] = 0.0;                                                    \n"
+    "                                                                      \n"
+    "  for (uint s = get_local_size(0) / 2; s > 0; s >>= 1) {              \n"
+    "    barrier(CLK_LOCAL_MEM_FENCE);                                     \n"
+    "    if (get_local_id(0) < s)                                          \n"
+    "      s_abc[i] += s_abc[i + s];                                       \n"
+    "  }                                                                   \n"
+    "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
+    "                                                                      \n"
+    "  if (get_local_id(0) == 0)                                           \n"
+    "    out[get_group_id(0)] = s_abc[0];                                  \n"
+    "}                                                                     \n"
+    "                                                                      \n"
+    "__kernel void gs(__global scalar *v, __global const uint *gs_off,     \n"
+    "                 __global const uint *gs_idx, const uint n) {         \n"
+    "  int i = get_global_id(0);                                           \n"
+    "  if (i < n) {                                                        \n"
+    "    scalar s = 0.0;                                                   \n"
+    "    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j)                  \n"
+    "      s += v[gs_idx[j]];                                              \n"
+    "    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j)                  \n"
+    "      v[gs_idx[j]] = s;                                               \n"
+    "  }                                                                   \n"
+    "                                                                      \n"
+    "                                                                      \n";
+
 // OpenCL device, context, queue and program.
 static cl_device_id ocl_device_id;
 static cl_command_queue ocl_queue;
@@ -153,21 +226,6 @@ static const size_t local_size = 512;
 
 static void opencl_kernels_init(const uint verbose) {
   bp5_debug(verbose, "opencl_kernels_init: Read kernel source ...");
-  // FIXME: Don't hardcode path for the kernel file.
-  FILE *fp = fopen("./backends/bp5-backend-opencl.cl", "r");
-  if (!fp)
-    bp5_error("opencl_kernels_init: Failed to open kernel source file.");
-
-  fseek(fp, 0, SEEK_END);
-  size_t knl_src_size = ftell(fp);
-  char *knl_src = bp5_calloc(char, knl_src_size + 1);
-  rewind(fp);
-
-  fread(knl_src, sizeof(char), knl_src_size, fp);
-  knl_src[knl_src_size] = '\0';
-  fclose(fp);
-  bp5_debug(verbose, "done.\n");
-
   // Build OpenCL kernels.
   bp5_debug(verbose, "opencl_kernels_init: Build kernels ...");
   cl_int err;
