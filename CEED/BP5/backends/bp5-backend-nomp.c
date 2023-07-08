@@ -45,15 +45,6 @@ inline static void zero(scalar *v, const uint n) {
     v[i] = 0;
 }
 
-inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
-                           const uint n) {
-  scalar wrk[1] = {0};
-#pragma nomp for
-  for (uint i = 0; i < n; i++)
-    wrk[0] += a[i] * b[i] * c[i];
-  return wrk[0];
-}
-
 inline static void copy(scalar *a, const scalar *b, const uint n) {
 #pragma nomp for
   for (uint i = 0; i < n; i++)
@@ -74,10 +65,13 @@ inline static void add2s2(scalar *a, const scalar *b, const scalar c,
     a[i] += c * b[i];
 }
 
-inline static void ax(scalar *w, const scalar *p, const uint nelt,
-                      const uint nx1) {
-  // TODO: Implement ax_kernel.
-  return;
+inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
+                           const uint n) {
+  scalar wrk[1] = {0};
+#pragma nomp for
+  for (uint i = 0; i < n; i++)
+    wrk[0] += a[i] * b[i] * c[i];
+  return wrk[0];
 }
 
 inline static void gs(scalar *v, const uint gs_n) {
@@ -89,6 +83,12 @@ inline static void gs(scalar *v, const uint gs_n) {
     for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
       v[gs_idx[j]] = s;
   }
+}
+
+inline static void ax(scalar *w, const scalar *p, const uint nelt,
+                      const uint nx1) {
+  // TODO: Implement ax_kernel.
+  return;
 }
 
 static void nomp_init(const struct bp5_t *bp5) {

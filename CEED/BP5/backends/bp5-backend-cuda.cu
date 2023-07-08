@@ -85,41 +85,6 @@ inline static void zero(scalar *d_v, const uint n) {
   zero_kernel<<<global_size, local_size>>>(d_v, n);
 }
 
-__global__ static void glsc3_kernel(scalar *out, const scalar *a,
-                                    const scalar *b, const scalar *c,
-                                    const uint n) {
-  extern __shared__ scalar s_abc[];
-
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    s_abc[threadIdx.x] = a[i] * b[i] * c[i];
-  else
-    s_abc[threadIdx.x] = 0;
-
-  for (uint s = blockDim.x / 2; s > 0; s >>= 1) {
-    __syncthreads();
-    if (threadIdx.x < s)
-      s_abc[threadIdx.x] += s_abc[threadIdx.x + s];
-  }
-  __syncthreads();
-  out[blockIdx.x] = s_abc[0];
-}
-
-inline static scalar glsc3(const scalar *d_a, const scalar *d_b,
-                           const scalar *d_c, const uint n) {
-  const size_t global_size = (n + local_size - 1) / local_size;
-  glsc3_kernel<<<global_size, local_size, local_size>>>(d_wrk, d_a, d_b, d_c,
-                                                        n);
-  check_driver(cudaDeviceSynchronize());
-
-  check_driver(cudaMemcpy(wrk, d_wrk, global_size * sizeof(scalar),
-                          cudaMemcpyDeviceToHost));
-  for (uint i = 1; i < global_size; i++)
-    wrk[0] += wrk[i];
-
-  return wrk[0];
-}
-
 __global__ static void copy_kernel(scalar *out, const scalar *in,
                                    const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -158,10 +123,39 @@ inline static void add2s2(scalar *d_a, const scalar *d_b, const scalar c,
   add2s2_kernel<<<global_size, local_size>>>(d_a, d_b, c, n);
 }
 
-inline static void ax(scalar *w, const scalar *p, const uint nelt,
-                      const uint nx1) {
-  // TODO: Implement ax_kernel.
-  return;
+__global__ static void glsc3_kernel(scalar *out, const scalar *a,
+                                    const scalar *b, const scalar *c,
+                                    const uint n) {
+  extern __shared__ scalar s_abc[];
+
+  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < n)
+    s_abc[threadIdx.x] = a[i] * b[i] * c[i];
+  else
+    s_abc[threadIdx.x] = 0;
+
+  for (uint s = blockDim.x / 2; s > 0; s >>= 1) {
+    __syncthreads();
+    if (threadIdx.x < s)
+      s_abc[threadIdx.x] += s_abc[threadIdx.x + s];
+  }
+  __syncthreads();
+  out[blockIdx.x] = s_abc[0];
+}
+
+inline static scalar glsc3(const scalar *d_a, const scalar *d_b,
+                           const scalar *d_c, const uint n) {
+  const size_t global_size = (n + local_size - 1) / local_size;
+  glsc3_kernel<<<global_size, local_size, local_size>>>(d_wrk, d_a, d_b, d_c,
+                                                        n);
+  check_driver(cudaDeviceSynchronize());
+
+  check_driver(cudaMemcpy(wrk, d_wrk, global_size * sizeof(scalar),
+                          cudaMemcpyDeviceToHost));
+  for (uint i = 1; i < global_size; i++)
+    wrk[0] += wrk[i];
+
+  return wrk[0];
 }
 
 __global__ static void gs_kernel(scalar *v, const uint *gs_off,
@@ -179,6 +173,12 @@ __global__ static void gs_kernel(scalar *v, const uint *gs_off,
 inline static void gs(scalar *d_v, const uint gs_n) {
   const size_t global_size = (gs_n + local_size - 1) / local_size;
   gs_kernel<<<global_size, local_size>>>(d_v, d_gs_off, d_gs_idx, gs_n);
+}
+
+inline static void ax(scalar *w, const scalar *p, const uint nelt,
+                      const uint nx1) {
+  // TODO: Implement ax_kernel.
+  return;
 }
 
 static uint initialized = 0;
