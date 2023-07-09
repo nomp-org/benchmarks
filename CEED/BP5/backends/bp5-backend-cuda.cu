@@ -181,18 +181,18 @@ __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
                                      const scalar *g, const scalar *D,
                                      const uint nelt, const uint nx1,
                                      const scalar ngeo) {
-  extern __shared__ scalar smem[];
+  const uint ebase = blockIdx.x * nx1 * nx1 * nx1;
+  const uint i = threadIdx.x;
+  const uint j = threadIdx.y;
+  const uint k = threadIdx.z;
 
+  extern __shared__ scalar smem[];
   scalar *s_D = (scalar *)smem;
   scalar *s_u = (scalar *)&s_D[nx1 * nx1];
   scalar *s_ur = (scalar *)&s_u[nx1 * nx1 * nx1];
   scalar *s_us = (scalar *)&s_ur[nx1 * nx1 * nx1];
   scalar *s_ut = (scalar *)&s_us[nx1 * nx1 * nx1];
 
-  const uint ebase = blockIdx.x * nx1 * nx1 * nx1;
-  const uint i = threadIdx.x;
-  const uint j = threadIdx.y;
-  const uint k = threadIdx.z;
   s_u[BP5_IDX3(i, j, k)] = u[ebase + BP5_IDX3(i, j, k)];
   s_ur[BP5_IDX3(i, j, k)] = 0;
   s_us[BP5_IDX3(i, j, k)] = 0;
@@ -213,6 +213,7 @@ __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
   scalar r_G11 = g[gbase + 3];
   scalar r_G12 = g[gbase + 4];
   scalar r_G22 = g[gbase + 5];
+
   scalar wr = r_G00 * s_ur[BP5_IDX3(i, j, k)] +
               r_G01 * s_us[BP5_IDX3(i, j, k)] + r_G02 * s_ut[BP5_IDX3(i, j, k)];
   scalar ws = r_G01 * s_ur[BP5_IDX3(i, j, k)] +
