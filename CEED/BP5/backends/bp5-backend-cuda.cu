@@ -1,5 +1,7 @@
 #include "bp5-impl.h"
 
+static uint initialized = 0;
+
 static const char *ERR_STR_CUDA_FAILURE = "Cuda %s failure: %s.";
 
 #define check_error(CALL, ERR_T, SUCCES, GET_ERR, OP)                          \
@@ -241,8 +243,6 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
   size_t shared_size = (4 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
   ax_kernel_v00<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D, nelt, nx1, ngeo);
 }
-
-static uint initialized = 0;
 
 static void cuda_init(const struct bp5_t *bp5) {
   if (initialized)

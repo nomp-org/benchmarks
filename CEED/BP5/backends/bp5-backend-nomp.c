@@ -181,6 +181,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *ri) {
   bp5_debug(bp5->verbose, "nomp_run: ... ");
 
   clock_t t0 = clock();
+
   // Copy rhs to device buffer
   const uint n = bp5_get_local_dofs(bp5);
   for (uint i = 0; i < n; i++)

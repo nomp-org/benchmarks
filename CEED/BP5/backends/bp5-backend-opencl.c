@@ -1,5 +1,4 @@
 #include "bp5-impl.h"
-#include <time.h>
 
 #define CL_TARGET_OPENCL_VERSION 220
 #ifdef __APPLE__
@@ -8,6 +7,8 @@
 #else
 #include <CL/cl.h>
 #endif
+
+static uint initialized = 0;
 
 static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error code: %d.";
 
@@ -382,8 +383,6 @@ static void gs(cl_mem *x, cl_mem *gs_off, cl_mem *gs_idx, const uint gs_n) {
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(gs)");
 }
-
-static uint initialized = 0;
 
 static void opencl_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "opencl_init: Initializing OpenCL backend... ");
