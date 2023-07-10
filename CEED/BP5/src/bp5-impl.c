@@ -1,4 +1,5 @@
 #include "bp5-impl.h"
+#include "bp5-backend.h"
 #include <ctype.h>
 #include <getopt.h>
 #include <string.h>

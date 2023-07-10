@@ -34,24 +34,6 @@ struct bp5_t {
 };
 
 //
-// Register/Init Backends.
-//
-// Register a single GPU backend. This function is called by each backend.
-BP5_INTERN void
-bp5_register_backend(const char *name, void (*initialize)(const struct bp5_t *),
-                     double (*run)(const struct bp5_t *, const scalar *),
-                     void (*finalize)(void));
-
-// Register GPU backends.
-BP5_INTERN void bp5_register_backends(void);
-
-// Initialize a given backend to run BP5.
-void bp5_init_backend(const struct bp5_t *bp5);
-
-// Un-register GPU backends.
-BP5_INTERN void bp5_unregister_backends(void);
-
-//
 // Setup BP5.
 //
 // Get the number of local DOFs.

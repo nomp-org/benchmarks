@@ -1,9 +1,5 @@
-#include "bp5-impl.h"
+#include "bp5-backend.h"
 #include <string.h>
-
-#define BP5_BACKEND(function) BP5_INTERN int function(void);
-#include "bp5-backend-list.h"
-#undef BP5_BACKEND
 
 struct bp5_backend_t {
   char name[BUFSIZ];

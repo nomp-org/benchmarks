@@ -1,4 +1,4 @@
-#include "bp5-impl.h"
+#include "bp5-backend.h"
 
 #define CL_TARGET_OPENCL_VERSION 220
 #ifdef __APPLE__
@@ -539,6 +539,6 @@ static void opencl_finalize(void) {
   initialized = 0;
 }
 
-BP5_INTERN void bp5_opencl_init(void) {
+void bp5_opencl_init(void) {
   bp5_register_backend("OPENCL", opencl_init, opencl_run, opencl_finalize);
 }
