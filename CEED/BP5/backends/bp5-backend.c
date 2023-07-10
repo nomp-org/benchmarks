@@ -52,9 +52,13 @@ void bp5_init_backend(const struct bp5_t *bp5) {
 }
 
 void bp5_unregister_backends(void) {
+  if (backends_capacity == 0)
+    return;
+
   for (uint i = 0; i < backends_count; i++) {
     backends[i]->finalize();
     bp5_free(&backends[i]);
   }
-  backends_count = 0;
+  bp5_free(&backends);
+  backends_count = backends_capacity = 0;
 }

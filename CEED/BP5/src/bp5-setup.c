@@ -32,10 +32,11 @@ static int cmp_dof_t(const void *a, const void *b) {
     return -1;
 }
 
-static uint log_2(uint x) {
+static uint log_2(const uint x) {
   bp5_assert(x > 0, "x must be a positive interger.");
   uint l = 0;
-  while (x >>= 1)
+  uint x_ = x;
+  while (x_ >>= 1)
     l++;
   bp5_assert((1 << l) == x, "x must be a power of 2.");
   return l;

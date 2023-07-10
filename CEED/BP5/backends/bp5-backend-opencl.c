@@ -11,25 +11,26 @@ static uint initialized = 0;
 
 static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
 
-#define CASE(msg, VAL, STR)                                                    \
+#define CASE(MSG, VAL, STR)                                                    \
   case VAL:                                                                    \
-    bp5_error(ERR_STR_OPENCL_FAILURE, msg, VAL, STR);                          \
+    bp5_error(ERR_STR_OPENCL_FAILURE, MSG, VAL, STR);                          \
     break;
 
 // clang-format off
-#define FOR_EACH_ERROR(macro, msg, err_)                                       \
-  macro(msg, CL_INVALID_BINARY, "CL_INVALID_BINARY")                           \
-  macro(msg, CL_INVALID_COMMAND_QUEUE, "CL_INVALID_COMMAND_QUEUE")             \
-  macro(msg, CL_INVALID_CONTEXT, "CL_INVALID_CONTEXT")                         \
-  macro(msg, CL_INVALID_DEVICE, "CL_INVALID_DEVICE")                           \
-  macro(msg, CL_INVALID_KERNEL, "CL_INVALID_KERNEL")                           \
-  macro(msg, CL_INVALID_KERNEL_ARGS, "CL_INVALID_KERNEL_ARGS")                 \
-  macro(msg, CL_INVALID_MEM_OBJECT, "CL_INVALID_MEM_OBJECT")                   \
-  macro(msg, CL_INVALID_OPERATION, "CL_INVALID_OPERATION")                     \
-  macro(msg, CL_INVALID_PROGRAM, "CL_INVALID_PROGRAM")                         \
-  macro(msg, CL_INVALID_VALUE, "CL_INVALID_VALUE")                             \
-  macro(msg, CL_OUT_OF_RESOURCES, "CL_OUT_OF_RESOURCES")                       \
-  macro(msg, CL_OUT_OF_HOST_MEMORY, "CL_OUT_OF_HOST_MEMORY")
+#define FOR_EACH_ERROR(MSG)                                                    \
+  CASE(MSG, CL_INVALID_BINARY, "CL_INVALID_BINARY")                            \
+  CASE(MSG, CL_INVALID_BUFFER_SIZE, "CL_INVALID_BUFFER_SIZE")                  \
+  CASE(MSG, CL_INVALID_COMMAND_QUEUE, "CL_INVALID_COMMAND_QUEUE")              \
+  CASE(MSG, CL_INVALID_CONTEXT, "CL_INVALID_CONTEXT")                          \
+  CASE(MSG, CL_INVALID_DEVICE, "CL_INVALID_DEVICE")                            \
+  CASE(MSG, CL_INVALID_KERNEL, "CL_INVALID_KERNEL")                            \
+  CASE(MSG, CL_INVALID_KERNEL_ARGS, "CL_INVALID_KERNEL_ARGS")                  \
+  CASE(MSG, CL_INVALID_MEM_OBJECT, "CL_INVALID_MEM_OBJECT")                    \
+  CASE(MSG, CL_INVALID_OPERATION, "CL_INVALID_OPERATION")                      \
+  CASE(MSG, CL_INVALID_PROGRAM, "CL_INVALID_PROGRAM")                          \
+  CASE(MSG, CL_INVALID_VALUE, "CL_INVALID_VALUE")                              \
+  CASE(MSG, CL_OUT_OF_RESOURCES, "CL_OUT_OF_RESOURCES")                        \
+  CASE(MSG, CL_OUT_OF_HOST_MEMORY, "CL_OUT_OF_HOST_MEMORY")
 // clang-format on
 
 #define check(call, msg)                                                       \
@@ -37,7 +38,7 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
     cl_int err_ = (call);                                                      \
     if (err_ != CL_SUCCESS) {                                                  \
       switch (err_) {                                                          \
-        FOR_EACH_ERROR(CASE, msg, err_)                                        \
+        FOR_EACH_ERROR(msg)                                                    \
       default:                                                                 \
         bp5_error(ERR_STR_OPENCL_FAILURE, msg, err_, "UNKNOWN");               \
         break;                                                                 \
@@ -289,9 +290,12 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
                              NULL, NULL),
         "clEnqueueWriteBuffer(gs_off)");
 
+  // We add +1 to the actual buffer size in order to avoid
+  // CL_INVALID_BUFFER_SIZE in case of there are zero gather-scatter dofs (for
+  // example a single element with order = 1).
   gs_idx_mem =
       clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
-                     bp5->gs_off[bp5->gs_n] * sizeof(uint), NULL, &err);
+                     (bp5->gs_off[bp5->gs_n] + 1) * sizeof(uint), NULL, &err);
   check(err, "clCreateBuffer(gs_idx)");
   check(clEnqueueWriteBuffer(ocl_queue, gs_idx_mem, CL_TRUE, 0,
                              bp5->gs_off[bp5->gs_n] * sizeof(uint), bp5->gs_idx,
