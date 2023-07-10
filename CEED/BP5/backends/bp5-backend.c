@@ -38,12 +38,13 @@ void bp5_register_backends(void) {
 }
 
 void bp5_init_backend(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_init_backend: ...");
+  bp5_debug(bp5->verbose, "bp5_init_backend: ...\n");
 
   for (uint i = 0; i < backends_count; i++) {
     if (strncmp(backends[i]->name, bp5->backend, BUFSIZ) == 0) {
       backends[i]->initialize(bp5);
-      bp5_debug(bp5->verbose, "done.\n");
+      bp5_debug(bp5->verbose, "bp5_init_backend: %s done.\n",
+                backends[i]->name);
       return;
     }
   }

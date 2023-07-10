@@ -160,7 +160,7 @@ static cl_context ocl_ctx;
 
 static void opencl_device_init(const struct bp5_t *bp5) {
   // Setup OpenCL platform.
-  bp5_debug(bp5->verbose, "opencl_init: Initialize platform ...");
+  bp5_debug(bp5->verbose, "opencl_init: Initialize platform ...\n");
   cl_uint num_platforms = 0;
   check(clGetPlatformIDs(0, NULL, &num_platforms), "clGetPlatformIDs");
   if (bp5->platform_id < 0 | bp5->platform_id >= num_platforms)
@@ -171,10 +171,10 @@ static void opencl_device_init(const struct bp5_t *bp5) {
         "clGetPlatformIDs");
   cl_platform_id platform = cl_platforms[bp5->platform_id];
   bp5_free(&cl_platforms);
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "opencl_init: done.\n");
 
   // Setup OpenCL device.
-  bp5_debug(bp5->verbose, "opencl_init: Initialize device ...");
+  bp5_debug(bp5->verbose, "opencl_init: Initialize device ...\n");
   cl_uint num_devices = 0;
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices),
         "clGetDeviceIDs");
@@ -187,17 +187,17 @@ static void opencl_device_init(const struct bp5_t *bp5) {
         "clGetDeviceIDs");
   ocl_device_id = cl_devices[bp5->device_id];
   bp5_free(&cl_devices);
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "opencl_init: done.\n");
 
   // Setup OpenCL context and queue.
   cl_int err;
-  bp5_debug(bp5->verbose, "opencl_init: Initialize context and queue ...");
+  bp5_debug(bp5->verbose, "opencl_init: Initialize context and queue ...\n");
   ocl_ctx = clCreateContext(NULL, 1, &ocl_device_id, NULL, NULL, &err);
   check(err, "clCreateContext");
   ocl_queue =
       clCreateCommandQueueWithProperties(ocl_ctx, ocl_device_id, 0, &err);
   check(err, "clCreateCommandQueueWithProperties");
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "opencl_init: done.\n");
 }
 
 // OpenCL device buffers.
@@ -208,7 +208,7 @@ static cl_mem wrk_mem;
 static scalar *wrk;
 
 static void opencl_mem_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "opencl_mem_init: Copy problem data to device ...");
+  bp5_debug(bp5->verbose, "opencl_mem_init: Copy problem data to device ...\n");
 
   // Allocate device buffers and copy problem data to device.
   ulong dofs = bp5_get_local_dofs(bp5);
@@ -276,7 +276,7 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
                            NULL, &err);
   check(err, "clCreateBuffer(wrk)");
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "opencl_mem_init: done.\n");
 }
 
 // OpenCL kernels.
@@ -287,17 +287,15 @@ static cl_kernel ax_kernel, gs_kernel;
 static const size_t local_size = 512;
 
 static void opencl_kernels_init(const uint verbose) {
-  bp5_debug(verbose, "opencl_kernels_init: Read kernel source ...");
   // Build OpenCL kernels.
-  bp5_debug(verbose, "opencl_kernels_init: Build kernels ...");
+  bp5_debug(verbose, "opencl_kernels_init: Build kernels ...\n");
   cl_int err;
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
   check(err, "clCreateProgramWithSource");
-  bp5_free(&knl_src);
   check(clBuildProgram(ocl_program, 1, &ocl_device_id, NULL, NULL, NULL),
         "clBuildProgram");
-  bp5_debug(verbose, "done.\n");
+  bp5_debug(verbose, "opencl_kernels_init: done.\n");
 
   bp5_debug(verbose, "opencl_kernels_init: Create kernels ...");
   mask_kernel = clCreateKernel(ocl_program, "mask", &err);
@@ -316,7 +314,7 @@ static void opencl_kernels_init(const uint verbose) {
   check(err, "clCreateKernel(ax)");
   gs_kernel = clCreateKernel(ocl_program, "gs", &err);
   check(err, "clCreateKernel(gs)");
-  bp5_debug(verbose, "done.\n");
+  bp5_debug(verbose, "opencl_kernels_init: done.\n");
 }
 
 static void mask(cl_mem *mem, const uint n) {
@@ -446,7 +444,7 @@ static void gs(cl_mem *x, cl_mem *gs_off, cl_mem *gs_idx, const uint gs_n) {
 }
 
 static void opencl_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "opencl_init: Initializing OpenCL backend... ");
+  bp5_debug(bp5->verbose, "opencl_init: Initializing OpenCL backend ...\n");
   if (initialized)
     return;
 
@@ -455,7 +453,7 @@ static void opencl_init(const struct bp5_t *bp5) {
   opencl_mem_init(bp5);
 
   initialized = 1;
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "opencl_init: done.\n");
 }
 
 static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {

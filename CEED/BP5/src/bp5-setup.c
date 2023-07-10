@@ -112,11 +112,13 @@ void bp5_gs_setup(struct bp5_t *bp5) {
 
   bp5_free(&glo_num);
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "bp5_gs_setup: gs_n=%u, repeated dof=%u\n", gs_n,
+            rdof);
+  bp5_debug(bp5->verbose, "bp5_gs_setup: done.\n");
 }
 
 void bp5_read_zwgll(struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_read_zwgll: ...");
+  bp5_debug(bp5->verbose, "bp5_read_zwgll: ...\n");
 
   FILE *fp = fopen("data/zwgll.dat", "r");
   if (!fp)
@@ -142,11 +144,11 @@ void bp5_read_zwgll(struct bp5_t *bp5) {
 
   fclose(fp);
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "bp5_read_zwgll: done.\n");
 }
 
 void bp5_geom_setup(struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_geom_setup: ...");
+  bp5_debug(bp5->verbose, "bp5_geom_setup: ...\n");
 
   const uint nx1 = bp5->nx1, nelt = bp5->nelt;
   uint dof = 0;
@@ -165,11 +167,11 @@ void bp5_geom_setup(struct bp5_t *bp5) {
     }
   }
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "bp5_geom_setup: done.\n");
 }
 
 void bp5_derivative_setup(struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_derivative_setup: ...");
+  bp5_debug(bp5->verbose, "bp5_derivative_setup: ...\n");
 
   uint nx1 = bp5->nx1;
   scalar *z = bp5->z;
@@ -204,7 +206,7 @@ void bp5_derivative_setup(struct bp5_t *bp5) {
 
   bp5_free(&a);
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "bp5_derivative_setup: done.\n");
 }
 
 static void gs(scalar *c, const struct bp5_t *bp5) {
@@ -218,7 +220,7 @@ static void gs(scalar *c, const struct bp5_t *bp5) {
 }
 
 void bp5_inverse_multiplicity_setup(struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_inverse_multiplicity_setup: ...");
+  bp5_debug(bp5->verbose, "bp5_inverse_multiplicity_setup: ...\n");
 
   uint ndof = bp5_get_local_dofs(bp5);
   scalar *c = bp5->c = bp5_calloc(scalar, ndof);
@@ -230,5 +232,5 @@ void bp5_inverse_multiplicity_setup(struct bp5_t *bp5) {
   for (uint i = 0; i < ndof; i++)
     c[i] = 1 / c[i];
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "bp5_inverse_multiplicity_setup: done.\n");
 }
