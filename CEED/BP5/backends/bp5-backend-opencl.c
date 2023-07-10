@@ -3,20 +3,46 @@
 #define CL_TARGET_OPENCL_VERSION 220
 #ifdef __APPLE__
 #include <OpenCL/cl.h>
-#define clCreateCommandQueueWithProperties clCreateCommandQueue
 #else
 #include <CL/cl.h>
 #endif
 
 static uint initialized = 0;
 
-static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error code: %d.";
+static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
+
+#define CASE(msg, VAL, STR)                                                    \
+  case VAL:                                                                    \
+    bp5_error(ERR_STR_OPENCL_FAILURE, msg, VAL, STR);                          \
+    break;
+
+// clang-format off
+#define FOR_EACH_ERROR(macro, msg, err_)                                       \
+  macro(msg, CL_INVALID_BINARY, "CL_INVALID_BINARY")                           \
+  macro(msg, CL_INVALID_COMMAND_QUEUE, "CL_INVALID_COMMAND_QUEUE")             \
+  macro(msg, CL_INVALID_CONTEXT, "CL_INVALID_CONTEXT")                         \
+  macro(msg, CL_INVALID_DEVICE, "CL_INVALID_DEVICE")                           \
+  macro(msg, CL_INVALID_KERNEL, "CL_INVALID_KERNEL")                           \
+  macro(msg, CL_INVALID_KERNEL_ARGS, "CL_INVALID_KERNEL_ARGS")                 \
+  macro(msg, CL_INVALID_MEM_OBJECT, "CL_INVALID_MEM_OBJECT")                   \
+  macro(msg, CL_INVALID_OPERATION, "CL_INVALID_OPERATION")                     \
+  macro(msg, CL_INVALID_PROGRAM, "CL_INVALID_PROGRAM")                         \
+  macro(msg, CL_INVALID_VALUE, "CL_INVALID_VALUE")                             \
+  macro(msg, CL_OUT_OF_RESOURCES, "CL_OUT_OF_RESOURCES")                       \
+  macro(msg, CL_OUT_OF_HOST_MEMORY, "CL_OUT_OF_HOST_MEMORY")
+// clang-format on
 
 #define check(call, msg)                                                       \
   {                                                                            \
     cl_int err_ = (call);                                                      \
-    if (err_ != CL_SUCCESS)                                                    \
-      bp5_error(ERR_STR_OPENCL_FAILURE, msg, err_);                            \
+    if (err_ != CL_SUCCESS) {                                                  \
+      switch (err_) {                                                          \
+        FOR_EACH_ERROR(CASE, msg, err_)                                        \
+      default:                                                                 \
+        bp5_error(ERR_STR_OPENCL_FAILURE, msg, err_, "UNKNOWN");               \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
   }
 
 static const char *knl_src =
@@ -156,7 +182,7 @@ static const char *knl_src =
     "                                                                      \n";
 
 // OpenCL device, context, queue and program.
-static cl_device_id ocl_device_id;
+static cl_device_id ocl_device;
 static cl_command_queue ocl_queue;
 static cl_context ocl_ctx;
 
@@ -187,17 +213,16 @@ static void opencl_device_init(const struct bp5_t *bp5) {
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, num_devices, cl_devices,
                        &num_devices),
         "clGetDeviceIDs");
-  ocl_device_id = cl_devices[bp5->device_id];
+  ocl_device = cl_devices[bp5->device_id];
   bp5_free(&cl_devices);
   bp5_debug(bp5->verbose, "opencl_init: done.\n");
 
   // Setup OpenCL context and queue.
   cl_int err;
   bp5_debug(bp5->verbose, "opencl_init: Initialize context and queue ...\n");
-  ocl_ctx = clCreateContext(NULL, 1, &ocl_device_id, NULL, NULL, &err);
+  ocl_ctx = clCreateContext(NULL, 1, &ocl_device, NULL, NULL, &err);
   check(err, "clCreateContext");
-  ocl_queue =
-      clCreateCommandQueueWithProperties(ocl_ctx, ocl_device_id, 0, &err);
+  ocl_queue = clCreateCommandQueueWithProperties(ocl_ctx, ocl_device, 0, &err);
   check(err, "clCreateCommandQueueWithProperties");
   bp5_debug(bp5->verbose, "opencl_init: done.\n");
 }
@@ -234,19 +259,20 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
   // Copy multiplicity array.
   c_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
                          NULL, &err);
+  check(err, "clCreateBuffer(c)");
   check(clEnqueueWriteBuffer(ocl_queue, c_mem, CL_TRUE, 0,
                              dofs * sizeof(scalar), bp5->c, 0, NULL, NULL),
         "clEnqueueWriteBuffer(c)");
 
   // Copy geometric factors and derivative matrix.
-  g_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, 6 * dofs * sizeof(scalar),
+  g_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY, 6 * dofs * sizeof(scalar),
                          NULL, &err);
   check(err, "clCreateBuffer(g)");
   check(clEnqueueWriteBuffer(ocl_queue, g_mem, CL_TRUE, 0,
                              6 * dofs * sizeof(scalar), bp5->g, 0, NULL, NULL),
         "clEnqueueWriteBuffer(g)");
 
-  D_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE,
+  D_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
                          bp5->nx1 * bp5->nx1 * sizeof(scalar), NULL, &err);
   check(err, "clCreateBuffer(D)");
   check(clEnqueueWriteBuffer(ocl_queue, D_mem, CL_TRUE, 0,
@@ -255,7 +281,7 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
         "clEnqueueWriteBuffer(D)");
 
   // Copy gather-scatter offsets and indices.
-  gs_off_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE,
+  gs_off_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
                               (bp5->gs_n + 1) * sizeof(uint), NULL, &err);
   check(err, "clCreateBuffer(gs_off)");
   check(clEnqueueWriteBuffer(ocl_queue, gs_off_mem, CL_TRUE, 0,
@@ -264,7 +290,7 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
         "clEnqueueWriteBuffer(gs_off)");
 
   gs_idx_mem =
-      clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE,
+      clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
                      bp5->gs_off[bp5->gs_n] * sizeof(uint), NULL, &err);
   check(err, "clCreateBuffer(gs_idx)");
   check(clEnqueueWriteBuffer(ocl_queue, gs_idx_mem, CL_TRUE, 0,
@@ -295,13 +321,13 @@ static void opencl_kernels_init(const uint verbose) {
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
   check(err, "clCreateProgramWithSource");
-  err = clBuildProgram(ocl_program, 1, &ocl_device_id, NULL, NULL, NULL);
+  err = clBuildProgram(ocl_program, 1, &ocl_device, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
     size_t log_size;
-    clGetProgramBuildInfo(ocl_program, ocl_device_id, CL_PROGRAM_BUILD_LOG, 0,
+    clGetProgramBuildInfo(ocl_program, ocl_device, CL_PROGRAM_BUILD_LOG, 0,
                           NULL, &log_size);
     char *log = bp5_calloc(char, log_size);
-    clGetProgramBuildInfo(ocl_program, ocl_device_id, CL_PROGRAM_BUILD_LOG,
+    clGetProgramBuildInfo(ocl_program, ocl_device, CL_PROGRAM_BUILD_LOG,
                           log_size, log, NULL);
     bp5_debug(verbose, "clBuildProgram failed with error:\n %s.\n", log);
     bp5_free(&log);
@@ -522,8 +548,6 @@ static void opencl_finalize(void) {
   if (!initialized)
     return;
 
-  check(clReleaseCommandQueue(ocl_queue), "clReleaseCommandQueue");
-  check(clReleaseContext(ocl_ctx), "clReleaseContext");
   check(clReleaseProgram(ocl_program), "clReleaseProgram");
   check(clReleaseKernel(mask_kernel), "clReleaseKernel(mask)");
   check(clReleaseKernel(zero_kernel), "clReleaseKernel(zero)");
@@ -545,6 +569,8 @@ static void opencl_finalize(void) {
   check(clReleaseMemObject(gs_idx_mem), "clReleaseMemObject(gs_idx)");
   check(clReleaseMemObject(wrk_mem), "clReleaseMemObject(wrk)");
   bp5_free(&wrk);
+  check(clReleaseCommandQueue(ocl_queue), "clReleaseCommandQueue");
+  check(clReleaseContext(ocl_ctx), "clReleaseContext");
 
   initialized = 0;
 }
@@ -552,3 +578,7 @@ static void opencl_finalize(void) {
 void bp5_opencl_init(void) {
   bp5_register_backend("OPENCL", opencl_init, opencl_run, opencl_finalize);
 }
+
+#undef check
+#undef FOR_EACH_ERROR
+#undef CASE
