@@ -21,7 +21,8 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error code: %d.";
 
 static const char *knl_src =
     "#define scalar double                                                 \n"
-    "#define uint uint32_t                                                 \n"
+    "#define IDX2(i, j) ((i) + nx1 * (j))                                  \n"
+    "#define IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))                 \n"
     "                                                                      \n"
     "__kernel void mask(__global scalar *v) {                              \n"
     "  int i = get_global_id(0);                                           \n"
@@ -59,7 +60,7 @@ static const char *knl_src =
     "__kernel void glsc3(__global scalar *out,                             \n"
     "                    __global const scalar *a,                         \n"
     "                    __global const scalar *b,                         \n"
-    "                    __global cosnt scalar *c,                         \n"
+    "                    __global const scalar *c,                         \n"
     "                    __local scalar *s_abc,                            \n"
     "                    const uint n) {                                   \n"
     "  int i = get_global_id(0);                                           \n"
@@ -95,7 +96,7 @@ static const char *knl_src =
     "                     __global const scalar *g,                        \n"
     "                     __global const scalar *D, const uint nelt,       \n"
     "                     const uint nx1, const uint ngeo,                 \n"
-    "                     __local scalar *smem)) {                         \n"
+    "                     __local scalar *smem) {                          \n"
     "  const uint ebase = get_group_id(0) * nx1 * nx1 * nx1;               \n"
     "  const uint i = get_local_id(0);                                     \n"
     "  const uint j = get_local_id(1);                                     \n"
@@ -114,9 +115,9 @@ static const char *knl_src =
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
     "  for (uint l = 0; l < nx1; l++) {                                    \n"
-    "    s_ur[IDX3(i, j, k)] += s_D[IDX2(i, l) * s_u[IDX3(k, j, l)];       \n"
-    "    s_us[IDX3(i, j, k)] += s_D[IDX2(j, l) * s_u[IDX3(k, l, i)];       \n"
-    "    s_ut[IDX3(i, j, k)] += s_D[IDX2(k, l) * s_u[IDX3(l, j, i)];       \n"
+    "    s_ur[IDX3(i, j, k)] += s_D[IDX2(i, l)] * s_u[IDX3(k, j, l)];      \n"
+    "    s_us[IDX3(i, j, k)] += s_D[IDX2(j, l)] * s_u[IDX3(k, l, i)];      \n"
+    "    s_ut[IDX3(i, j, k)] += s_D[IDX2(k, l)] * s_u[IDX3(l, j, i)];      \n"
     "  }                                                                   \n"
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
@@ -151,7 +152,8 @@ static const char *knl_src =
     "          s_D[IDX2(l, k)] * s_ut[IDX3(i, j, l)];                      \n"
     "  }                                                                   \n"
     "  w[ebase + IDX3(i, j, k)] = wo;                                      \n"
-    "}                                                                     \n";
+    "}                                                                     \n"
+    "                                                                      \n";
 
 // OpenCL device, context, queue and program.
 static cl_device_id ocl_device_id;
@@ -307,7 +309,7 @@ static void opencl_kernels_init(const uint verbose) {
   }
   bp5_debug(verbose, "opencl_kernels_init: done.\n");
 
-  bp5_debug(verbose, "opencl_kernels_init: Create kernels ...");
+  bp5_debug(verbose, "opencl_kernels_init: Create kernels ...\n");
   mask_kernel = clCreateKernel(ocl_program, "mask", &err);
   check(err, "clCreateKernel(mask)");
   zero_kernel = clCreateKernel(ocl_program, "zero", &err);
@@ -320,7 +322,7 @@ static void opencl_kernels_init(const uint verbose) {
   check(err, "clCreateKernel(add2s1)");
   add2s2_kernel = clCreateKernel(ocl_program, "add2s2", &err);
   check(err, "clCreateKernel(add2s2)");
-  ax_kernel = clCreateKernel(ocl_program, "ax", &err);
+  ax_kernel = clCreateKernel(ocl_program, "ax_v00", &err);
   check(err, "clCreateKernel(ax)");
   gs_kernel = clCreateKernel(ocl_program, "gs", &err);
   check(err, "clCreateKernel(gs)");
