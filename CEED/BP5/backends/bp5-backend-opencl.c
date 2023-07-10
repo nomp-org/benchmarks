@@ -293,8 +293,18 @@ static void opencl_kernels_init(const uint verbose) {
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
   check(err, "clCreateProgramWithSource");
-  check(clBuildProgram(ocl_program, 1, &ocl_device_id, NULL, NULL, NULL),
-        "clBuildProgram");
+  err = clBuildProgram(ocl_program, 1, &ocl_device_id, NULL, NULL, NULL);
+  if (err != CL_SUCCESS) {
+    size_t log_size;
+    clGetProgramBuildInfo(ocl_program, ocl_device_id, CL_PROGRAM_BUILD_LOG, 0,
+                          NULL, &log_size);
+    char *log = bp5_calloc(char, log_size);
+    clGetProgramBuildInfo(ocl_program, ocl_device_id, CL_PROGRAM_BUILD_LOG,
+                          log_size, log, NULL);
+    bp5_debug(verbose, "clBuildProgram failed with error:\n %s.\n", log);
+    bp5_free(&log);
+    bp5_error("clBuildProgram failed.");
+  }
   bp5_debug(verbose, "opencl_kernels_init: done.\n");
 
   bp5_debug(verbose, "opencl_kernels_init: Create kernels ...");
