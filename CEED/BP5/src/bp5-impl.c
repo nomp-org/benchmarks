@@ -113,11 +113,11 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
 }
 
 struct bp5_t *bp5_init(int *argc, char ***argv) {
-  // Register available GPU backends.
-  bp5_register_backends();
-
   struct bp5_t *bp5 = bp5_calloc(struct bp5_t, 1);
   bp5_parse_opts(bp5, argc, argv);
+
+  // Register available GPU backends.
+  bp5_register_backends(bp5->verbose);
 
   // Setup the problem data on host.
   bp5_gs_setup(bp5);

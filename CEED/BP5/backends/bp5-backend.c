@@ -32,10 +32,13 @@ void bp5_register_backend(const char *name,
   bp5_debug(1, "bp5_register_backend: %s\n", backend->name);
 }
 
-void bp5_register_backends(void) {
+void bp5_register_backends(int verbose) {
+  bp5_debug(verbose, "bp5_register_backends: ...\n");
 #define BP5_BACKEND(function) function();
 #include "bp5-backend-list.h"
 #undef BP5_BACKEND
+  bp5_debug(verbose, "bp5_register_backends: backends_count=%d done.\n",
+            backends_count);
 }
 
 void bp5_init_backend(const struct bp5_t *bp5) {
