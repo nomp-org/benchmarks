@@ -32,24 +32,27 @@ static int cmp_dof_t(const void *a, const void *b) {
     return -1;
 }
 
+static uint log_2(uint x) {
+  bp5_assert(x > 0, "x must be a positive interger.");
+  uint l = 0;
+  while (x >>= 1)
+    l++;
+  bp5_assert((1 << l) == x, "x must be a power of 2.");
+  return l;
+}
+
 void bp5_gs_setup(struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "bp5_gs_setup: ...");
+  bp5_debug(bp5->verbose, "bp5_gs_setup: ...\n");
 
   // Calculate nelx, nelz, and nelz from nelt. nelx, nely, and nelz are the
-  // number of elements in x, y and z directions, respectively.
-  const uint nelt = bp5->nelt;
-  uint nelx = cbrt(nelt + 1);
-  while (nelt % nelx != 0)
-    nelx--;
-
-  uint nely = sqrt(nelt / nelx + 1);
-  while (nelt % (nelx * nely) != 0)
-    nely--;
-
-  uint nelz = nelt / (nelx * nely);
-  bp5_debug(bp5->verbose, "nelx = %u, nely = %u, nelz = %u\n", nelx, nely,
-            nelz);
-  bp5_assert(nelt == nelx * nely * nelz, "nelt = nelx * nely * nelz");
+  // number of elements in x, y and z directions, respectively. `nelt` has to be
+  // a power of 2.
+  const uint nelt = bp5->nelt, l = log_2(nelt);
+  const uint nelx = 1 << (l + 2) / 3;
+  const uint nely = 1 << (l - (l + 2) / 3 + 1) / 2;
+  const uint nelz = nelt / (nelx * nely);
+  bp5_debug(bp5->verbose, "nelx=%u, nely=%u, nelz=%u\n", nelx, nely, nelz);
+  bp5_assert(nelx * nely * nelz == nelt, "nelt must equal nelx*nely*nelz.");
 
   // Number the dofs based on the element location in x, y and z and the
   // polynomial order.
