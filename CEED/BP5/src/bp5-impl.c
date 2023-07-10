@@ -31,7 +31,7 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       {"bp5-verbose", optional_argument, 0, 10},
       {"bp5-device-id", optional_argument, 0, 12},
       {"bp5-platform-id", optional_argument, 0, 14},
-      {"bp5-backend", optional_argument, 0, 16},
+      {"bp5-backend", required_argument, 0, 16},
       {"bp5-nelt", required_argument, 0, 20},
       {"bp5-nx1", required_argument, 0, 22},
       {"bp5-max-iter", optional_argument, 0, 24},
@@ -39,13 +39,13 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       {0, 0, 0, 0}};
 
   // Default values for optional arguments.
-  bp5->verbose = 0, bp5->device_id = 0, bp5->platform_id = 0;
-  strncpy(bp5->backend, "NOMP", BUFSIZ);
+  bp5->verbose = 1, bp5->device_id = 0, bp5->platform_id = 0;
   bp5->max_iter = 1000;
 
   // Set invalid values for required arguments so we can check if they were
   // initialized later.
   bp5->nelt = -1, bp5->nx1 = -1;
+  strncpy(bp5->backend, "", 1);
 
   char **argv = *argv_;
   for (;;) {
@@ -91,6 +91,8 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
     bp5_error("bp5_parse_opts: --bp5-nelt is not provided or invalid.\n");
   if (bp5->nx1 < 2)
     bp5_error("bp5_parse_opts: --bp5-nx1 is not provided or invalid.\n");
+  if (strnlen(bp5->backend, BUFSIZ) < 1)
+    bp5_error("bp5_parse_opts: --bp5-backend is not provided or invalid.\n");
 
   // Remove parsed arguments from argv. We just need to update the pointers
   // since command line arguments are not transient and available until the
