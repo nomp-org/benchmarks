@@ -29,6 +29,7 @@ void bp5_register_backend(const char *name,
   }
 
   backends[backends_count++] = backend;
+  bp5_debug(1, "bp5_register_backend: %s\n", backend->name);
 }
 
 void bp5_register_backends(void) {

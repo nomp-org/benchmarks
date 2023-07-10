@@ -500,9 +500,9 @@ static void opencl_init(const struct bp5_t *bp5) {
 
 static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
   if (!initialized)
-    bp5_error("opencl_run: OpenCL backend is not initialized.");
+    bp5_error("opencl_run: OpenCL backend is not initialized.\n");
 
-  bp5_debug(bp5->verbose, "opencl_run: ... ");
+  bp5_debug(bp5->verbose, "opencl_run: ... \n");
 
   clock_t t0 = clock();
 

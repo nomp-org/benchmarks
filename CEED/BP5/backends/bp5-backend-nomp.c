@@ -8,7 +8,7 @@ static const uint *gs_off, *gs_idx;
 static scalar *wrk;
 
 static void nomp_mem_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "nomp_mem_init: Copy problem data to device ... ");
+  bp5_debug(bp5->verbose, "nomp_mem_init: Copy problem data to device ...\n");
 
   // We allocate following arrays used in CG on both host and device.
   // Techinically we don't need the host arrays if we always run on the device.
@@ -33,7 +33,7 @@ static void nomp_mem_init(const struct bp5_t *bp5) {
   wrk = bp5_calloc(scalar, 3 * bp5_get_elem_dofs(bp5));
 #pragma nomp update(alloc : wrk [0:3 * bp5_get_elem_dofs(bp5)])
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "nomp_mem_init: done.\n");
 }
 
 inline static void mask(scalar *v, const uint n) {
@@ -171,14 +171,14 @@ static void nomp_init(const struct bp5_t *bp5) {
   nomp_mem_init(bp5);
 
   initialized = 1;
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "nomp_init: done.\n");
 }
 
 static scalar nomp_run(const struct bp5_t *bp5, const scalar *ri) {
   if (!initialized)
     bp5_error("nomp_run: NOMP backend is not initialized.\n");
 
-  bp5_debug(bp5->verbose, "nomp_run: ... ");
+  bp5_debug(bp5->verbose, "nomp_run: ... \n");
 
   clock_t t0 = clock();
 
