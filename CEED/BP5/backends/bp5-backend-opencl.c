@@ -539,13 +539,13 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
     add2s2(&r_mem, &w_mem, -alpha, n);
   }
   clFinish(ocl_queue);
-  clock_t t1 = clock() - t0;
+  clock_t t1 = clock();
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "opencl_run: done.\n");
   bp5_debug(bp5->verbose, "opencl_run: Iterations = %d.\n", bp5->max_iter);
   bp5_debug(bp5->verbose, "opencl_run: Residual = %e %e.\n", r0, rtz2);
 
-  return ((double)t1) / CLOCKS_PER_SEC;
+  return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }
 
 static void opencl_finalize(void) {

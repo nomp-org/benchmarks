@@ -1,4 +1,4 @@
-#include "bp5-impl.h"
+#include "bp5-backend.h"
 
 static uint initialized = 0;
 
@@ -159,10 +159,10 @@ inline static void ax(scalar *w, const scalar *u, const scalar *geo,
 }
 
 static void nomp_init(const struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "nomp_init: Initializing NOMP backend ...\n");
   if (initialized)
     return;
 
-  bp5_debug(bp5->verbose, "nomp_init: Initializing NOMP backend ... ");
   const int argc = 6;
   char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "cuda",
                   "--nomp-verbose",   "0"};
@@ -215,13 +215,13 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *ri) {
     add2s2(r, w, -alpha, n);
   }
 #pragma nomp sync
-  clock_t t1 = clock() - t0;
+  clock_t t1 = clock();
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "nomp_run: done.\n");
   bp5_debug(bp5->verbose, "nomp_run: Iterations = %d.\n", bp5->max_iter);
   bp5_debug(bp5->verbose, "nomp_run: Residual = %e %e.\n", r0, rtz2);
 
-  return ((double)t1) / CLOCKS_PER_SEC;
+  return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }
 
 static void nomp_finalize(void) {
@@ -245,6 +245,6 @@ static void nomp_finalize(void) {
   initialized = 0;
 }
 
-BP5_INTERN void bp5_nomp_init(void) {
+void bp5_nomp_init(void) {
   bp5_register_backend("NOMP", nomp_init, nomp_run, nomp_finalize);
 }
