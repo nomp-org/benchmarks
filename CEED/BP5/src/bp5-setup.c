@@ -55,28 +55,52 @@ void bp5_gs_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "nelx=%u, nely=%u, nelz=%u\n", nelx, nely, nelz);
   bp5_assert(nelx * nely * nelz == nelt, "nelt must equal nelx*nely*nelz.");
 
+  // Calculate the global element number for each local element.
+  bp5_debug(bp5->verbose, "Calculating the global element number for each "
+                          "local element ...\n");
+  uint *lglel = bp5_calloc(uint, nelt);
+  uint e = 0;
+  const uint nelxy = nelx * nely;
+  for (uint k = 0; k < nelz; k++) {
+    for (uint j = 0; j < nely; j++) {
+      for (uint i = 0; i < nelx; i++) {
+        lglel[e] = 1 + i + j * nelx + k * nelxy;
+        e = e + 1;
+      }
+    }
+  }
+  bp5_assert(e == nelt, "e must equal nelt.");
+
+  // Allocate memory for the global numbering of the dofs.
+  const ulong ndof = bp5_get_local_dofs(bp5);
+  slong *glo_num = bp5_calloc(slong, ndof);
+
   // Number the dofs based on the element location in x, y and z and the
   // polynomial order.
   const uint nx1 = bp5->nx1, p = nx1 - 1;
-  const ulong ndof = bp5_get_local_dofs(bp5);
-  slong *glo_num = bp5_calloc(slong, ndof);
-  uint d = 0;
   for (uint e = 0; e < nelt; e++) {
-    uint ex = e % nelx;
-    uint ez = e / (nelx * nely);
-    uint ey = (e - ex - ez * nelx * nely) / nelx;
-    for (uint px = 0; px < nx1; px++) {
-      for (uint py = 0; py < nx1; py++) {
-        for (uint pz = 0; pz < nx1; pz++) {
-          uint dx = p * ex + px;
-          uint dy = p * ey + py;
-          uint dz = p * ez + pz;
-          glo_num[d++] =
-              dx + (p * nelx + 1) * dy + (p * nelx + 1) * (p * nely + 1) * dz;
+    const uint eg = lglel[e];
+    uint ez = 1 + (eg - 1) / nelxy;
+    uint ex = (eg + nelx - 1) % nelx + 1;
+    uint ey = (eg + nelxy - 1) % nelxy + 1;
+    ey = 1 + (ey - 1) / nelx;
+    ex--, ey--, ez--;
+    for (uint k = 0; k < nx1; k++) {
+      for (uint j = 0; j < nx1; j++) {
+        for (uint i = 0; i < nx1; i++) {
+          uint dx = p * ex + i;
+          uint dy = p * ey + j;
+          uint dz = p * ez + k;
+          uint ii = 1 + dx + dy * (p * nelx + 1) +
+                    dz * (p * nelx + 1) * (p * nely + 1);
+          uint ll = 1 + i + nx1 * j + nx1 * nx1 * k + nx1 * nx1 * nx1 * e;
+          glo_num[ll - 1] = ii;
         }
       }
     }
   }
+
+  bp5_free(&lglel);
 
   // Sort the dofs based on the global number to find the unique dofs which are
   // repeated

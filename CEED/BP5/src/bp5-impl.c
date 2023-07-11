@@ -162,8 +162,8 @@ double bp5_run(const struct bp5_t *bp5) {
   // Set RHS for the solver.
   const uint ldofs = bp5_get_local_dofs(bp5);
   scalar *r = bp5_calloc(scalar, ldofs);
-  for (uint i = 0; i < ldofs; i++)
-    r[i] = sin(1e9 * cos(1e9 * i * i));
+  for (uint i = 1; i <= ldofs; i++)
+    r[i - 1] = sin(1e9 * cos(1e9 * i * i));
 
   // dssum
   bp5_gs(r, bp5);

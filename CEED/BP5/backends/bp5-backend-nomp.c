@@ -198,7 +198,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
   mask(r, n);
 
   // Run CG on the device.
-  scalar rnorm = glsc3(r, r, c, n), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(r, r, c, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
     // Preconditioner (which is just a copy for now.
     copy(z, r, n);
