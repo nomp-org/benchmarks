@@ -213,7 +213,7 @@ void bp5_derivative_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_derivative_setup: done.\n");
 }
 
-static void gs(scalar *c, const struct bp5_t *bp5) {
+void bp5_gs(scalar *c, const struct bp5_t *bp5) {
   for (uint i = 0; i < bp5->gs_n; i++) {
     scalar sum = 0;
     for (uint j = bp5->gs_off[i]; j < bp5->gs_off[i + 1]; j++)
@@ -231,10 +231,16 @@ void bp5_inverse_multiplicity_setup(struct bp5_t *bp5) {
   for (uint i = 0; i < ndof; i++)
     c[i] = 1;
 
-  gs(c, bp5);
+  bp5_gs(c, bp5);
 
   for (uint i = 0; i < ndof; i++)
     c[i] = 1 / c[i];
 
   bp5_debug(bp5->verbose, "bp5_inverse_multiplicity_setup: done.\n");
+}
+
+void bp5_inverse_multiplicity(scalar *x, const struct bp5_t *bp5) {
+  uint ndof = bp5_get_local_dofs(bp5);
+  for (uint i = 0; i < ndof; i++)
+    x[i] = x[i] * bp5->c[i];
 }

@@ -45,6 +45,9 @@ BP5_INTERN uint bp5_get_elem_dofs(const struct bp5_t *bp5);
 // Gather-scatter setup.
 BP5_INTERN void bp5_gs_setup(struct bp5_t *bp5);
 
+// Gather-scatter.
+BP5_INTERN void bp5_gs(scalar *x, const struct bp5_t *bp5);
+
 // Read quadrature points and weights.
 BP5_INTERN void bp5_read_zwgll(struct bp5_t *bp5);
 
@@ -56,5 +59,8 @@ BP5_INTERN void bp5_derivative_setup(struct bp5_t *bp5);
 
 // Setup inverse multiplicity.
 BP5_INTERN void bp5_inverse_multiplicity_setup(struct bp5_t *bp5);
+
+// Apply inverse multiplicity.
+BP5_INTERN void bp5_inverse_multiplicity(scalar *x, const struct bp5_t *bp5);
 
 #endif // __LIBBP5_IMPL_H__
