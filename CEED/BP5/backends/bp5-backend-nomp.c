@@ -36,14 +36,6 @@ static void nomp_mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "nomp_mem_init: done.\n");
 }
 
-inline static void mask(scalar *v, const uint n) {
-#pragma nomp for
-  for (uint i = 0; i < n; i++) {
-    if (i == 0)
-      v[i] = 0;
-  }
-}
-
 inline static void zero(scalar *v, const uint n) {
 #pragma nomp for
   for (uint i = 0; i < n; i++)
@@ -54,6 +46,14 @@ inline static void copy(scalar *a, const scalar *b, const uint n) {
 #pragma nomp for
   for (uint i = 0; i < n; i++)
     a[i] = b[i];
+}
+
+inline static void mask(scalar *v, const uint n) {
+#pragma nomp for
+  for (uint i = 0; i < n; i++) {
+    if (i == 0)
+      v[i] = 0;
+  }
 }
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
@@ -174,30 +174,37 @@ static void nomp_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "nomp_init: done.\n");
 }
 
-static scalar nomp_run(const struct bp5_t *bp5, const scalar *ri) {
+static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
   if (!initialized)
     bp5_error("nomp_run: NOMP backend is not initialized.\n");
 
   bp5_debug(bp5->verbose, "nomp_run: ... \n");
 
+  const uint n = bp5_get_local_dofs(bp5);
+
   clock_t t0 = clock();
 
+  scalar pap = 0;
+  scalar rtz1 = 1, rtz2 = 0;
+
+  // Zero out the solution.
+  zero(x, n);
+
   // Copy rhs to device buffer
-  const uint n = bp5_get_local_dofs(bp5);
   for (uint i = 0; i < n; i++)
-    r[i] = ri[i];
+    r[i] = f[i];
 #pragma nomp update(to : r [0:n])
 
-  // Run CG on the device.
-  scalar rtz1 = 1, rtz2 = 0;
   mask(r, n);
-  zero(x, n);
-  scalar r0 = glsc3(r, r, c, n);
+
+  // Run CG on the device.
+  scalar rnorm = glsc3(r, r, c, n), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
+    // Preconditioner (which is just a copy for now.
     copy(z, r, n);
 
     rtz2 = rtz1;
-    rtz1 = glsc3(r, z, c, n);
+    rtz1 = glsc3(r, c, z, n);
 
     scalar beta = rtz1 / rtz2;
     if (i == 0)
@@ -209,17 +216,21 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *ri) {
     add2s2(w, p, 0.1, n);
     mask(w, n);
 
-    scalar pap = glsc3(w, p, c, n);
+    pap = glsc3(w, c, p, n);
+
     scalar alpha = rtz1 / pap;
     add2s2(x, p, alpha, n);
     add2s2(r, w, -alpha, n);
+
+    scalar rtr = glsc3(r, c, r, n);
+    rnorm = sqrt(rtr);
   }
 #pragma nomp sync
   clock_t t1 = clock();
 
   bp5_debug(bp5->verbose, "nomp_run: done.\n");
   bp5_debug(bp5->verbose, "nomp_run: Iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "nomp_run: Residual = %e %e.\n", r0, rtz2);
+  bp5_debug(bp5->verbose, "nomp_run: Residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }
