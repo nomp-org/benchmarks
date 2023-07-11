@@ -11,6 +11,7 @@ struct bp5_backend_t {
 static struct bp5_backend_t **backends = NULL;
 static uint backends_count = 0;
 static uint backends_capacity = 0;
+static int backend_active = -1;
 
 void bp5_register_backend(const char *name,
                           void (*initialize)(const struct bp5_t *),
@@ -49,10 +50,22 @@ void bp5_init_backend(const struct bp5_t *bp5) {
       backends[i]->initialize(bp5);
       bp5_debug(bp5->verbose, "bp5_init_backend: %s done.\n",
                 backends[i]->name);
+      backend_active = i;
       return;
     }
   }
   bp5_error("bp5_init_backend: Unknown backend: %s\n", bp5->backend);
+}
+
+scalar bp5_run_backend(const struct bp5_t *bp5, const scalar *rhs) {
+  bp5_debug(bp5->verbose, "bp5_run_backend: ...\n");
+
+  bp5_assert(backend_active >= 0 && backend_active < (int)backends_count,
+             "Invalid value for backend_active.");
+  scalar elapased = backends[backend_active]->run(bp5, rhs);
+  bp5_debug(bp5->verbose, "bp5_run_backend: %s done.\n",
+            backends[backend_active]->name);
+  return elapased;
 }
 
 void bp5_unregister_backends(void) {

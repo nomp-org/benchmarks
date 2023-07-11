@@ -26,6 +26,8 @@ BP5_INTERN void bp5_register_backends(int verbose);
 // Initialize a user selected backend to run BP5.
 BP5_INTERN void bp5_init_backend(const struct bp5_t *bp5);
 
+BP5_INTERN scalar bp5_run_backend(const struct bp5_t *bp5, const scalar *rhs);
+
 // Un-register GPU backends.
 BP5_INTERN void bp5_unregister_backends(void);
 

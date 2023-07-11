@@ -40,7 +40,7 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
 
   // Default values for optional arguments.
   bp5->verbose = 1, bp5->device_id = 0, bp5->platform_id = 0;
-  bp5->max_iter = 1000;
+  bp5->max_iter = 100;
 
   // Set invalid values for required arguments so we can check if they were
   // initialized later.
@@ -156,12 +156,30 @@ void bp5_assert_(int cond, const char *msg, const char *file,
   }
 }
 
+double bp5_run(const struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_run: ...\n");
+
+  // Set RHS for the solver.
+  const uint ldofs = bp5_get_local_dofs(bp5);
+  scalar *r = bp5_calloc(scalar, ldofs);
+  for (uint i = 0; i < ldofs; i++)
+    r[i] = sin(2.0 * M_PI * i / ldofs);
+
+  // Solve the system.
+  double elapsed = bp5_run_backend(bp5, r);
+  bp5_free(&r);
+
+  bp5_debug(bp5->verbose, "bp5_run: done. Elapsed = %e\n", elapsed);
+
+  return elapsed;
+}
+
 void bp5_finalize(struct bp5_t **bp5_) {
   if (!bp5_ || !*bp5_)
     return;
 
   struct bp5_t *bp5 = *bp5_;
-  bp5_debug(bp5->verbose, "bp5_finalize: ...");
+  bp5_debug(bp5->verbose, "bp5_finalize: ...\n");
 
   bp5_unregister_backends();
 
@@ -172,5 +190,5 @@ void bp5_finalize(struct bp5_t **bp5_) {
   int verbose = bp5->verbose;
   bp5_free(bp5_);
 
-  bp5_debug(verbose, "done.\n");
+  bp5_debug(verbose, "bp5_finalize: done.\n");
 }
