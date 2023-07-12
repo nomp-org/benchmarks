@@ -30,8 +30,8 @@ static void nomp_mem_init(const struct bp5_t *bp5) {
 #pragma nomp update(to : c [0:dofs], g [0:6 * dofs], D [0:bp5->nx1 * bp5->nx1])
 
   // Work array on device and host.
-  wrk = bp5_calloc(scalar, 3 * bp5_get_elem_dofs(bp5));
-#pragma nomp update(alloc : wrk [0:3 * bp5_get_elem_dofs(bp5)])
+  wrk = bp5_calloc(scalar, 6 * bp5_get_elem_dofs(bp5));
+#pragma nomp update(alloc : wrk [0:6 * bp5_get_elem_dofs(bp5)])
 
   bp5_debug(bp5->verbose, "nomp_mem_init: done.\n");
 }
@@ -90,7 +90,7 @@ inline static void gs(scalar *v, const uint gs_n) {
   }
 }
 
-inline static void ax(scalar *w, const scalar *u, const scalar *geo,
+inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const uint nelt, const uint nx1,
                       const uint ngeo) {
   scalar *ur = wrk;
@@ -106,11 +106,11 @@ inline static void ax(scalar *w, const scalar *u, const scalar *geo,
           ut[BP5_IDX3(i, j, k)] = 0;
           for (uint l = 0; l < nx1; l++) {
             ur[BP5_IDX3(i, j, k)] +=
-                D[BP5_IDX2(i, l)] * u[ebase + BP5_IDX3(k, j, l)];
+                D[BP5_IDX2(l, i)] * u[ebase + BP5_IDX3(l, j, k)];
             us[BP5_IDX3(i, j, k)] +=
-                D[BP5_IDX2(j, l)] * u[ebase + BP5_IDX3(k, l, i)];
+                D[BP5_IDX2(l, j)] * u[ebase + BP5_IDX3(i, l, k)];
             ut[BP5_IDX3(i, j, k)] +=
-                D[BP5_IDX2(k, l)] * u[ebase + BP5_IDX3(l, j, i)];
+                D[BP5_IDX2(l, k)] * u[ebase + BP5_IDX3(i, j, l)];
           }
         }
       }
@@ -120,12 +120,12 @@ inline static void ax(scalar *w, const scalar *u, const scalar *geo,
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
           const uint gbase = ngeo * (ebase + BP5_IDX3(i, j, k));
-          scalar r_G00 = geo[gbase + 0];
-          scalar r_G01 = geo[gbase + 1];
-          scalar r_G02 = geo[gbase + 2];
-          scalar r_G11 = geo[gbase + 3];
-          scalar r_G12 = geo[gbase + 4];
-          scalar r_G22 = geo[gbase + 5];
+          scalar r_G00 = G[gbase + 0];
+          scalar r_G01 = G[gbase + 1];
+          scalar r_G02 = G[gbase + 2];
+          scalar r_G11 = G[gbase + 3];
+          scalar r_G12 = G[gbase + 4];
+          scalar r_G22 = G[gbase + 5];
           scalar wr = r_G00 * ur[BP5_IDX3(i, j, k)] +
                       r_G01 * us[BP5_IDX3(i, j, k)] +
                       r_G02 * ut[BP5_IDX3(i, j, k)];
@@ -147,9 +147,9 @@ inline static void ax(scalar *w, const scalar *u, const scalar *geo,
         for (uint i = 0; i < nx1; i++) {
           scalar wo = 0;
           for (uint l = 0; l < nx1; l++) {
-            wo += D[BP5_IDX2(l, i)] * ur[BP5_IDX3(l, j, k)] +
-                  D[BP5_IDX2(l, j)] * us[BP5_IDX3(i, l, k)] +
-                  D[BP5_IDX2(l, k)] * ut[BP5_IDX3(i, j, l)];
+            wo += D[BP5_IDX2(i, l)] * ur[BP5_IDX3(l, j, k)] +
+                  D[BP5_IDX2(j, l)] * us[BP5_IDX3(i, l, k)] +
+                  D[BP5_IDX2(k, l)] * ut[BP5_IDX3(i, j, l)];
           }
           w[ebase + BP5_IDX3(i, j, k)] = wo;
         }
@@ -200,7 +200,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, r, c, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
-    // Preconditioner (which is just a copy for now.
+    // Preconditioner (which is just a copy for now).
     copy(z, r, n);
 
     rtz2 = rtz1;
