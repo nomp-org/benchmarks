@@ -99,7 +99,6 @@ void bp5_gs_setup(struct bp5_t *bp5) {
       }
     }
   }
-
   bp5_free(&lglel);
 
   // Sort the dofs based on the global number to find the unique dofs which are
@@ -201,8 +200,8 @@ void bp5_geom_setup(struct bp5_t *bp5) {
 void bp5_derivative_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_derivative_setup: ...\n");
 
-  uint nx1 = bp5->nx1;
-  scalar *z = bp5->z;
+  const uint nx1 = bp5->nx1;
+  const scalar *z = bp5->z;
   scalar *a = bp5_calloc(scalar, nx1);
   for (uint i = 0; i < nx1; i++) {
     a[i] = 1;
@@ -214,21 +213,26 @@ void bp5_derivative_setup(struct bp5_t *bp5) {
   }
 
   scalar *D = bp5->D = bp5_calloc(scalar, nx1 * nx1);
-  uint k = 0;
+  for (uint i = 0; i < nx1; i++) {
+    for (uint j = 0; j < nx1; j++)
+      D[i * nx1 + j] = a[i] * (z[i] - z[j]);
+    D[i * nx1 + i] = 1;
+  }
+
   for (uint j = 0; j < nx1; j++) {
-    for (uint i = 0; i < nx1; i++) {
-      D[k] = 0;
-      if (i != j)
-        D[k] = a[j] / (a[i] * (z[i] - z[j]));
-      k++;
-    }
+    for (uint i = 0; i < nx1; i++)
+      D[j + i * nx1] /= a[j];
+  }
+  for (uint j = 0; j < nx1; j++) {
+    for (uint i = 0; i < nx1; i++)
+      D[i + nx1 * j] = 1.0 / D[i + nx1 * j];
   }
 
   for (uint i = 0; i < nx1; i++) {
-    k = i;
+    D[i + nx1 * i] = 0;
     scalar sum = 0;
-    for (uint j = 0; j < nx1; j++, k += nx1)
-      sum = sum + D[k];
+    for (uint j = 0; j < nx1; j++)
+      sum = sum + D[i * nx1 + j];
     D[i + nx1 * i] = -sum;
   }
 
