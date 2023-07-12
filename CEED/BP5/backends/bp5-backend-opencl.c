@@ -17,20 +17,32 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
     break;
 
 // clang-format off
-#define FOR_EACH_ERROR(MSG)                                                    \
-  CASE(MSG, CL_INVALID_BINARY, "CL_INVALID_BINARY")                            \
-  CASE(MSG, CL_INVALID_BUFFER_SIZE, "CL_INVALID_BUFFER_SIZE")                  \
-  CASE(MSG, CL_INVALID_COMMAND_QUEUE, "CL_INVALID_COMMAND_QUEUE")              \
-  CASE(MSG, CL_INVALID_CONTEXT, "CL_INVALID_CONTEXT")                          \
-  CASE(MSG, CL_INVALID_DEVICE, "CL_INVALID_DEVICE")                            \
-  CASE(MSG, CL_INVALID_KERNEL, "CL_INVALID_KERNEL")                            \
-  CASE(MSG, CL_INVALID_KERNEL_ARGS, "CL_INVALID_KERNEL_ARGS")                  \
-  CASE(MSG, CL_INVALID_MEM_OBJECT, "CL_INVALID_MEM_OBJECT")                    \
-  CASE(MSG, CL_INVALID_OPERATION, "CL_INVALID_OPERATION")                      \
-  CASE(MSG, CL_INVALID_PROGRAM, "CL_INVALID_PROGRAM")                          \
-  CASE(MSG, CL_INVALID_VALUE, "CL_INVALID_VALUE")                              \
-  CASE(MSG, CL_OUT_OF_RESOURCES, "CL_OUT_OF_RESOURCES")                        \
-  CASE(MSG, CL_OUT_OF_HOST_MEMORY, "CL_OUT_OF_HOST_MEMORY")
+#define FOR_EACH_ERROR(S)                                                      \
+  CASE(S, CL_INVALID_BINARY, "CL_INVALID_BINARY")                              \
+  CASE(S, CL_INVALID_BUFFER_SIZE, "CL_INVALID_BUFFER_SIZE")                    \
+  CASE(S, CL_INVALID_COMMAND_QUEUE, "CL_INVALID_COMMAND_QUEUE")                \
+  CASE(S, CL_INVALID_CONTEXT, "CL_INVALID_CONTEXT")                            \
+  CASE(S, CL_INVALID_DEVICE, "CL_INVALID_DEVICE")                              \
+  CASE(S, CL_INVALID_EVENT, "CL_INVALID_EVENT")                                \
+  CASE(S, CL_INVALID_EVENT_WAIT_LIST, "CL_INVALID_EVENT_WAIT_LIST")            \
+  CASE(S, CL_INVALID_GLOBAL_OFFSET, "CL_INVALID_GLOBAL_OFFSET")                \
+  CASE(S, CL_INVALID_GLOBAL_WORK_SIZE, "CL_INVALID_GLOBAL_WORK_SIZE")          \
+  CASE(S, CL_INVALID_KERNEL, "CL_INVALID_KERNEL")                              \
+  CASE(S, CL_INVALID_KERNEL_ARGS, "CL_INVALID_KERNEL_ARGS")                    \
+  CASE(S, CL_INVALID_KERNEL_DEFINITION, "CL_INVALID_KERNEL_DEFINITION")        \
+  CASE(S, CL_INVALID_KERNEL_NAME, "CL_INVALID_KERNEL_NAME")                    \
+  CASE(S, CL_INVALID_MEM_OBJECT, "CL_INVALID_MEM_OBJECT")                      \
+  CASE(S, CL_INVALID_OPERATION, "CL_INVALID_OPERATION")                        \
+  CASE(S, CL_INVALID_PROGRAM, "CL_INVALID_PROGRAM")                            \
+  CASE(S, CL_INVALID_PROGRAM_EXECUTABLE, "CL_INVALID_PROGRAM_EXECUTABLE")      \
+  CASE(S, CL_INVALID_VALUE, "CL_INVALID_VALUE")                                \
+  CASE(S, CL_INVALID_WORK_DIMENSION, "CL_INVALID_WORK_DIMENSION")              \
+  CASE(S, CL_INVALID_WORK_GROUP_SIZE, "CL_INVALID_WORK_GROUP_SIZE")            \
+  CASE(S, CL_INVALID_WORK_ITEM_SIZE, "CL_INVALID_WORK_ITEM_SIZE")              \
+  CASE(S, CL_MEM_OBJECT_ALLOCATION_FAILURE, "CL_MEM_OBJECT_ALLOCATION_FAILURE")\
+  CASE(S, CL_MISALIGNED_SUB_BUFFER_OFFSET, "CL_MISALIGNED_SUB_BUFFER_OFFSET")  \
+  CASE(S, CL_OUT_OF_RESOURCES, "CL_OUT_OF_RESOURCES")                          \
+  CASE(S, CL_OUT_OF_HOST_MEMORY, "CL_OUT_OF_HOST_MEMORY")
 // clang-format on
 
 #define check(call, msg)                                                       \
@@ -52,36 +64,36 @@ static const char *knl_src =
     "#define IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))                 \n"
     "                                                                      \n"
     "__kernel void mask(__global scalar *v) {                              \n"
-    "  int i = get_global_id(0);                                           \n"
-    "  if (i == 0)                                                         \n"
-    "    v[i] = 0.0;                                                       \n"
+    "  const int gid = get_global_id(0);                                   \n"
+    "  if (gid == 0)                                                       \n"
+    "    v[gid] = 0.0;                                                     \n"
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void zero(__global scalar *v, const uint n) {                \n"
-    "  int i = get_global_id(0);                                           \n"
-    "  if (i < n)                                                          \n"
-    "    v[i] = 0.0;                                                       \n"
+    "  const int gid = get_global_id(0);                                   \n"
+    "  if (gid < n)                                                        \n"
+    "    v[gid] = 0.0;                                                     \n"
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void copy(__global scalar *dst, __global const scalar *src,  \n"
     "                   const uint n) {                                    \n"
-    "  int i = get_global_id(0);                                           \n"
-    "  if (i < n)                                                          \n"
-    "    dst[i] = src[i];                                                  \n"
+    "  const int gid = get_global_id(0);                                   \n"
+    "  if (gid < n)                                                        \n"
+    "    dst[gid] = src[gid];                                              \n"
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void add2s1(__global scalar *a, __global const scalar *b,    \n"
     "                     const scalar c, const uint n) {                  \n"
-    "  int i = get_global_id(0);                                           \n"
-    "  if (i < n)                                                          \n"
-    "    a[i] += c * a[i] + b[i];                                          \n"
+    "  const int gid = get_global_id(0);                                   \n"
+    "  if (gid < n)                                                        \n"
+    "    a[gid] = c * a[gid] + b[gid];                                     \n"
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void add2s2(__global scalar *a, __global const scalar *b,    \n"
     "                     const scalar c, const uint n) {                  \n"
-    "  int i = get_global_id(0);                                           \n"
-    "  if (i < n)                                                          \n"
-    "    a[i] += c * b[i];                                                 \n"
+    "  const int gid = get_global_id(0);                                   \n"
+    "  if (gid < n)                                                        \n"
+    "    a[gid] += c * b[gid];                                             \n"
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void glsc3(__global scalar *out,                             \n"
@@ -90,39 +102,42 @@ static const char *knl_src =
     "                    __global const scalar *c,                         \n"
     "                    __local scalar *s_abc,                            \n"
     "                    const uint n) {                                   \n"
-    "  int i = get_global_id(0);                                           \n"
-    "  if (i < n)                                                          \n"
-    "    s_abc[i] = a[i] * b[i] * c[i];                                    \n"
+    "  int gid = get_global_id(0);                                         \n"
+    "  int lid = get_local_id(0);                                          \n"
+    "  if (gid < n)                                                        \n"
+    "    s_abc[lid] = a[gid] * b[gid] * c[gid];                            \n"
     "  else                                                                \n"
-    "   s_abc[i] = 0.0;                                                    \n"
+    "   s_abc[lid] = 0.0;                                                  \n"
     "                                                                      \n"
     "  for (uint s = get_local_size(0) / 2; s > 0; s >>= 1) {              \n"
     "    barrier(CLK_LOCAL_MEM_FENCE);                                     \n"
-    "    if (get_local_id(0) < s)                                          \n"
-    "      s_abc[i] += s_abc[i + s];                                       \n"
+    "    if (lid < s)                                                      \n"
+    "      s_abc[lid] += s_abc[lid + s];                                   \n"
     "  }                                                                   \n"
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
-    "  if (get_local_id(0) == 0)                                           \n"
+    "  if (lid == 0)                                                       \n"
     "    out[get_group_id(0)] = s_abc[0];                                  \n"
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void gs(__global scalar *v, __global const uint *gs_off,     \n"
-    "                 __global const uint *gs_idx, const uint n) {         \n"
+    "                 __global const uint *gs_idx, const uint gs_n) {      \n"
     "  int i = get_global_id(0);                                           \n"
-    "  if (i < n) {                                                        \n"
+    "  if (i < gs_n) {                                                     \n"
     "    scalar s = 0.0;                                                   \n"
-    "    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j)                  \n"
+    "    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)                  \n"
     "      s += v[gs_idx[j]];                                              \n"
-    "    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j)                  \n"
+    "    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)                  \n"
     "      v[gs_idx[j]] = s;                                               \n"
     "  }                                                                   \n"
     "}                                                                     \n"
     "                                                                      \n"
-    "__kernel void ax_v00(__global scalar *w, __global const scalar *u,    \n"
-    "                     __global const scalar *G,                        \n"
-    "                     __global const scalar *D, const uint nelt,       \n"
-    "                     const uint nx1,__local scalar *smem) {           \n"
+    "__kernel void ax_kernel_v00(__global scalar *w,                       \n"
+    "                            __global const scalar *u,                 \n"
+    "                            __global const scalar *G,                 \n"
+    "                            __global const scalar *D,                 \n"
+    "                            const uint nx1,                           \n"
+    "                            __local scalar *smem) {                   \n"
     "  const uint ebase = get_group_id(0) * nx1 * nx1 * nx1;               \n"
     "  const uint i = get_local_id(0);                                     \n"
     "  const uint j = get_local_id(1);                                     \n"
@@ -136,6 +151,8 @@ static const char *knl_src =
     "  s_ur[IDX3(i, j, k)] = 0;                                            \n"
     "  s_us[IDX3(i, j, k)] = 0;                                            \n"
     "  s_ut[IDX3(i, j, k)] = 0;                                            \n"
+    "  if (k == 0)                                                         \n"
+    "    s_D[IDX2(i, j)] = D[IDX2(i, j)];                                  \n"
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
     "  for (uint l = 0; l < nx1; l++) {                                    \n"
@@ -235,39 +252,40 @@ static scalar *wrk;
 static void opencl_mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "opencl_mem_init: Copy problem data to device ...\n");
 
+  const uint n = bp5_get_local_dofs(bp5);
+
   // Allocate device buffers and copy problem data to device.
-  ulong dofs = bp5_get_local_dofs(bp5);
   cl_int err;
-  r_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                         NULL, &err);
+  r_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
+                         &err);
   check(err, "clCreateBuffer(r)");
-  x_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                         NULL, &err);
+  x_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
+                         &err);
   check(err, "clCreateBuffer(x)");
-  z_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                         NULL, &err);
+  z_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
+                         &err);
   check(err, "clCreateBuffer(z)");
-  p_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                         NULL, &err);
+  p_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
+                         &err);
   check(err, "clCreateBuffer(p)");
-  w_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                         NULL, &err);
+  w_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
+                         &err);
   check(err, "clCreateBuffer(w)");
 
   // Copy multiplicity array.
-  c_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                         NULL, &err);
+  c_mem =
+      clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY, n * sizeof(scalar), NULL, &err);
   check(err, "clCreateBuffer(c)");
-  check(clEnqueueWriteBuffer(ocl_queue, c_mem, CL_TRUE, 0,
-                             dofs * sizeof(scalar), bp5->c, 0, NULL, NULL),
+  check(clEnqueueWriteBuffer(ocl_queue, c_mem, CL_TRUE, 0, n * sizeof(scalar),
+                             bp5->c, 0, NULL, NULL),
         "clEnqueueWriteBuffer(c)");
 
   // Copy geometric factors and derivative matrix.
-  g_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY, 6 * dofs * sizeof(scalar),
+  g_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY, 6 * n * sizeof(scalar),
                          NULL, &err);
   check(err, "clCreateBuffer(g)");
   check(clEnqueueWriteBuffer(ocl_queue, g_mem, CL_TRUE, 0,
-                             6 * dofs * sizeof(scalar), bp5->g, 0, NULL, NULL),
+                             6 * n * sizeof(scalar), bp5->g, 0, NULL, NULL),
         "clEnqueueWriteBuffer(g)");
 
   D_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
@@ -300,9 +318,9 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
         "clEnqueueWriteBuffer(gs_idx)");
 
   // Work array.
-  wrk = bp5_calloc(scalar, dofs);
-  wrk_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, dofs * sizeof(scalar),
-                           NULL, &err);
+  wrk = bp5_calloc(scalar, n);
+  wrk_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
+                           &err);
   check(err, "clCreateBuffer(wrk)");
 
   bp5_debug(bp5->verbose, "opencl_mem_init: done.\n");
@@ -349,7 +367,7 @@ static void opencl_kernels_init(const uint verbose) {
   check(err, "clCreateKernel(add2s1)");
   add2s2_kernel = clCreateKernel(ocl_program, "add2s2", &err);
   check(err, "clCreateKernel(add2s2)");
-  ax_kernel = clCreateKernel(ocl_program, "ax_v00", &err);
+  ax_kernel = clCreateKernel(ocl_program, "ax_kernel_v00", &err);
   check(err, "clCreateKernel(ax)");
   gs_kernel = clCreateKernel(ocl_program, "gs", &err);
   check(err, "clCreateKernel(gs)");
@@ -379,22 +397,33 @@ static void zero(cl_mem *mem, const uint n) {
 }
 
 static scalar glsc3(cl_mem *a, cl_mem *b, cl_mem *c, const uint n) {
-  check(clSetKernelArg(glsc3_kernel, 0, sizeof(cl_mem), a),
+  check(clSetKernelArg(glsc3_kernel, 0, sizeof(cl_mem), &wrk_mem),
         "clSetKernelArg(glsc3, 0)");
-  check(clSetKernelArg(glsc3_kernel, 1, sizeof(cl_mem), b),
+  check(clSetKernelArg(glsc3_kernel, 1, sizeof(cl_mem), a),
         "clSetKernelArg(glsc3, 1)");
-  check(clSetKernelArg(glsc3_kernel, 2, sizeof(cl_mem), c),
+  check(clSetKernelArg(glsc3_kernel, 2, sizeof(cl_mem), b),
         "clSetKernelArg(glsc3, 2)");
-  check(clSetKernelArg(glsc3_kernel, 3, sizeof(uint), &n),
+  check(clSetKernelArg(glsc3_kernel, 3, sizeof(cl_mem), c),
         "clSetKernelArg(glsc3, 3)");
+  check(clSetKernelArg(glsc3_kernel, 4, sizeof(scalar) * local_size, NULL),
+        "clSetKernelArg(glsc3, 4)");
+  check(clSetKernelArg(glsc3_kernel, 5, sizeof(uint), &n),
+        "clSetKernelArg(glsc3, 5)");
 
-  const size_t global_size = ((n + local_size - 1) / local_size) * local_size;
+  const size_t block_size = (n + local_size - 1) / local_size;
+  const size_t global_size = block_size * local_size;
   check(clEnqueueNDRangeKernel(ocl_queue, glsc3_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(glsc3)");
 
-  // FIXME: Do the host side reduction.
-  return 0;
+  check(clEnqueueReadBuffer(ocl_queue, wrk_mem, CL_TRUE, 0,
+                            sizeof(scalar) * block_size, wrk, 0, NULL, NULL),
+        "clEnqueueReadBuffer(glsc3, wrk)");
+
+  for (uint i = 1; i < block_size; i++)
+    wrk[0] += wrk[i];
+
+  return wrk[0];
 }
 
 static void copy(cl_mem *a, cl_mem *b, const uint n) {
@@ -453,19 +482,21 @@ static void ax(cl_mem *w, cl_mem *p, cl_mem *g, cl_mem *D, const uint nelt,
         "clSetKernelArg(ax, 2)");
   check(clSetKernelArg(ax_kernel, 3, sizeof(cl_mem), D),
         "clSetKernelArg(ax, 3)");
-  check(clSetKernelArg(ax_kernel, 4, sizeof(uint), &nelt),
-        "clSetKernelArg(ax, 4)");
-  check(clSetKernelArg(ax_kernel, 5, sizeof(uint), &nx1),
+  check(clSetKernelArg(ax_kernel, 4, sizeof(uint), &nx1),
         "clSetKernelArg(ax, 5)");
+  const size_t shared_size = (3 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
+  check(clSetKernelArg(ax_kernel, 5, shared_size, NULL),
+        "clSetKernelArg(ax, 6)");
 
-  const size_t local_size[2] = {nx1, nx1};
-  const size_t global_size[2] = {nelt * nx1, nx1};
-  check(clEnqueueNDRangeKernel(ocl_queue, ax_kernel, 2, NULL, global_size,
-                               local_size, 0, NULL, NULL),
+  const size_t local_work[3] = {nx1, nx1, nx1};
+  const size_t global_work[3] = {nelt * nx1, nx1, nx1};
+  check(clEnqueueNDRangeKernel(ocl_queue, ax_kernel, 3, NULL, global_work,
+                               local_work, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(ax)");
 }
 
-static void gs(cl_mem *x, cl_mem *gs_off, cl_mem *gs_idx, const uint gs_n) {
+static void gs(cl_mem *x, const cl_mem *gs_off, const cl_mem *gs_idx,
+               const uint gs_n) {
   check(clSetKernelArg(gs_kernel, 0, sizeof(cl_mem), x),
         "clSetKernelArg(gs, 0)");
   check(clSetKernelArg(gs_kernel, 1, sizeof(cl_mem), gs_off),
@@ -499,11 +530,10 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
   if (!initialized)
     bp5_error("opencl_run: OpenCL backend is not initialized.\n");
 
-  bp5_debug(bp5->verbose, "opencl_run: ... \n");
+  const uint n = bp5_get_local_dofs(bp5);
+  bp5_debug(bp5->verbose, "opencl_run: ... n=%u\n", n);
 
   clock_t t0 = clock();
-
-  const uint n = bp5_get_local_dofs(bp5);
 
   // Copy rhs to device buffer.
   check(clEnqueueWriteBuffer(ocl_queue, r_mem, CL_TRUE, 0, n * sizeof(scalar),
@@ -520,7 +550,7 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
   mask(&r_mem, n);
 
   // Run CG on the device.
-  scalar rnorm = sqrt(glsc3(&r_mem, &r_mem, &c_mem, n)), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(&z_mem, &r_mem, n);
@@ -546,6 +576,7 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
 
     scalar rtr = glsc3(&r_mem, &c_mem, &r_mem, n);
     rnorm = sqrt(rtr);
+    bp5_debug(bp5->verbose, "opencl_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
   clFinish(ocl_queue);
   clock_t t1 = clock();

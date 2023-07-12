@@ -241,7 +241,7 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
                       const scalar *d_D, const uint nelt, const uint nx1) {
   dim3 local_dim(nx1, nx1, nx1);
   dim3 global_dim(nelt);
-  size_t shared_size = (4 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
+  const size_t shared_size = (3 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
   ax_kernel_v00<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D, nelt, nx1);
 }
 

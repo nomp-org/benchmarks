@@ -178,11 +178,10 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
   if (!initialized)
     bp5_error("nomp_run: NOMP backend is not initialized.\n");
 
-  bp5_debug(bp5->verbose, "nomp_run: ... \n");
+  const uint n = bp5_get_local_dofs(bp5);
+  bp5_debug(bp5->verbose, "nomp_run: ... n=%u\n", n);
 
   clock_t t0 = clock();
-
-  const uint n = bp5_get_local_dofs(bp5);
 
   // Copy rhs to device buffer.
   for (uint i = 0; i < n; i++)
@@ -199,7 +198,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
   mask(r, n);
 
   // Run CG on the device.
-  scalar rnorm = sqrt(glsc3(r, r, c, n)), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(r, c, r, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(z, r, n);
@@ -225,6 +224,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm = sqrt(rtr);
+    bp5_debug(bp5->verbose, "nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
 #pragma nomp sync
   clock_t t1 = clock();
