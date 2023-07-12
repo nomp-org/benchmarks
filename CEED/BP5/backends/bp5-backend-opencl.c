@@ -120,41 +120,38 @@ static const char *knl_src =
     "}                                                                     \n"
     "                                                                      \n"
     "__kernel void ax_v00(__global scalar *w, __global const scalar *u,    \n"
-    "                     __global const scalar *g,                        \n"
+    "                     __global const scalar *G,                        \n"
     "                     __global const scalar *D, const uint nelt,       \n"
-    "                     const uint nx1, const uint ngeo,                 \n"
-    "                     __local scalar *smem) {                          \n"
+    "                     const uint nx1,__local scalar *smem) {           \n"
     "  const uint ebase = get_group_id(0) * nx1 * nx1 * nx1;               \n"
     "  const uint i = get_local_id(0);                                     \n"
     "  const uint j = get_local_id(1);                                     \n"
     "  const uint k = get_local_id(2);                                     \n"
     "                                                                      \n"
     "  scalar *s_D = smem;                                                 \n"
-    "  scalar *s_u = (scalar *)&s_D[nx1 * nx1];                            \n"
-    "  scalar *s_ur = (scalar *)&s_u[nx1 * nx1 * nx1];                     \n"
+    "  scalar *s_ur = (scalar *)&s_D[nx1 * nx1 * nx1];                     \n"
     "  scalar *s_us = (scalar *)&s_ur[nx1 * nx1 * nx1];                    \n"
     "  scalar *s_ut = (scalar *)&s_us[nx1 * nx1 * nx1];                    \n"
     "                                                                      \n"
-    "  s_u[IDX3(i, j, k)] = u[ebase + IDX3(i, j, k)];                      \n"
     "  s_ur[IDX3(i, j, k)] = 0;                                            \n"
     "  s_us[IDX3(i, j, k)] = 0;                                            \n"
     "  s_ut[IDX3(i, j, k)] = 0;                                            \n"
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
     "  for (uint l = 0; l < nx1; l++) {                                    \n"
-    "    s_ur[IDX3(i, j, k)] += s_D[IDX2(i, l)] * s_u[IDX3(k, j, l)];      \n"
-    "    s_us[IDX3(i, j, k)] += s_D[IDX2(j, l)] * s_u[IDX3(k, l, i)];      \n"
-    "    s_ut[IDX3(i, j, k)] += s_D[IDX2(k, l)] * s_u[IDX3(l, j, i)];      \n"
+    "    s_ur[IDX3(i, j, k)] += s_D[IDX2(l, i)] * u[ebase + IDX3(l, j, k)];\n"
+    "    s_us[IDX3(i, j, k)] += s_D[IDX2(l, j)] * u[ebase + IDX3(i, l, k)];\n"
+    "    s_ut[IDX3(i, j, k)] += s_D[IDX2(l, k)] * u[ebase + IDX3(i, j, l)];\n"
     "  }                                                                   \n"
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
-    "  const uint gbase = ngeo * (ebase + IDX3(i, j, k));                  \n"
-    "  scalar r_G00 = g[gbase + 0];                                        \n"
-    "  scalar r_G01 = g[gbase + 1];                                        \n"
-    "  scalar r_G02 = g[gbase + 2];                                        \n"
-    "  scalar r_G11 = g[gbase + 3];                                        \n"
-    "  scalar r_G12 = g[gbase + 4];                                        \n"
-    "  scalar r_G22 = g[gbase + 5];                                        \n"
+    "  const uint gbase = 6 * (ebase + IDX3(i, j, k));                     \n"
+    "  scalar r_G00 = G[gbase + 0];                                        \n"
+    "  scalar r_G01 = G[gbase + 1];                                        \n"
+    "  scalar r_G02 = G[gbase + 2];                                        \n"
+    "  scalar r_G11 = G[gbase + 3];                                        \n"
+    "  scalar r_G12 = G[gbase + 4];                                        \n"
+    "  scalar r_G22 = G[gbase + 5];                                        \n"
     "                                                                      \n"
     "  scalar wr = r_G00 * s_ur[IDX3(i, j, k)] +                           \n"
     "              r_G01 * s_us[IDX3(i, j, k)] +                           \n"
@@ -174,9 +171,9 @@ static const char *knl_src =
     "                                                                      \n"
     "  scalar wo = 0;                                                      \n"
     "  for (uint l = 0; l < nx1; l++) {                                    \n"
-    "    wo += s_D[IDX2(l, i)] * s_ur[IDX3(l, j, k)] +                     \n"
-    "          s_D[IDX2(l, j)] * s_us[IDX3(i, l, k)] +                     \n"
-    "          s_D[IDX2(l, k)] * s_ut[IDX3(i, j, l)];                      \n"
+    "    wo += s_D[IDX2(i, l)] * s_ur[IDX3(l, j, k)] +                     \n"
+    "          s_D[IDX2(j, l)] * s_us[IDX3(i, l, k)] +                     \n"
+    "          s_D[IDX2(k, l)] * s_ut[IDX3(i, j, l)];                      \n"
     "  }                                                                   \n"
     "  w[ebase + IDX3(i, j, k)] = wo;                                      \n"
     "}                                                                     \n"
@@ -506,22 +503,30 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
 
   clock_t t0 = clock();
 
-  // Copy rhs to device buffer r_mem.
   const uint n = bp5_get_local_dofs(bp5);
+
+  // Copy rhs to device buffer.
   check(clEnqueueWriteBuffer(ocl_queue, r_mem, CL_TRUE, 0, n * sizeof(scalar),
                              r, 0, NULL, NULL),
         "clEnqueueWriteBuffer(r)");
 
-  // Run CG on the device.
+  scalar pap = 0;
   scalar rtz1 = 1, rtz2 = 0;
-  mask(&r_mem, n);
+
+  // Zero out the solution.
   zero(&x_mem, n);
-  scalar r0 = glsc3(&r_mem, &r_mem, &c_mem, n);
+
+  // Apply Dirichlet BCs to RHS.
+  mask(&r_mem, n);
+
+  // Run CG on the device.
+  scalar rnorm = sqrt(glsc3(&r_mem, &r_mem, &c_mem, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
+    // Preconditioner (which is just a copy for now).
     copy(&z_mem, &r_mem, n);
 
     rtz2 = rtz1;
-    rtz1 = glsc3(&r_mem, &z_mem, &c_mem, n);
+    rtz1 = glsc3(&r_mem, &c_mem, &z_mem, n);
 
     scalar beta = rtz1 / rtz2;
     if (i == 0)
@@ -533,17 +538,21 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
     add2s2(&w_mem, &p_mem, 0.1, n);
     mask(&w_mem, n);
 
-    scalar pap = glsc3(&w_mem, &p_mem, &c_mem, n);
+    pap = glsc3(&w_mem, &c_mem, &p_mem, n);
+
     scalar alpha = rtz1 / pap;
     add2s2(&x_mem, &p_mem, alpha, n);
     add2s2(&r_mem, &w_mem, -alpha, n);
+
+    scalar rtr = glsc3(&r_mem, &c_mem, &r_mem, n);
+    rnorm = sqrt(rtr);
   }
   clFinish(ocl_queue);
   clock_t t1 = clock();
 
   bp5_debug(bp5->verbose, "opencl_run: done.\n");
   bp5_debug(bp5->verbose, "opencl_run: Iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "opencl_run: Residual = %e %e.\n", r0, rtz2);
+  bp5_debug(bp5->verbose, "opencl_run: Residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }

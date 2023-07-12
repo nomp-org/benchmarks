@@ -79,7 +79,8 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
   return wrk[0];
 }
 
-inline static void gs(scalar *v, const uint gs_n) {
+inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
+                      const uint gs_n) {
 #pragma nomp for
   for (uint i = 0; i < gs_n; i++) {
     scalar s = 0;
@@ -91,8 +92,7 @@ inline static void gs(scalar *v, const uint gs_n) {
 }
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
-                      const scalar *D, const uint nelt, const uint nx1,
-                      const uint ngeo) {
+                      const scalar *D, const uint nelt, const uint nx1) {
   scalar *ur = wrk;
   scalar *us = ur + nx1 * nx1 * nx1;
   scalar *ut = us + nx1 * nx1 * nx1;
@@ -119,7 +119,7 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
-          const uint gbase = ngeo * (ebase + BP5_IDX3(i, j, k));
+          const uint gbase = 6 * (ebase + BP5_IDX3(i, j, k));
           scalar r_G00 = G[gbase + 0];
           scalar r_G01 = G[gbase + 1];
           scalar r_G02 = G[gbase + 2];
@@ -180,9 +180,14 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
 
   bp5_debug(bp5->verbose, "nomp_run: ... \n");
 
+  clock_t t0 = clock();
+
   const uint n = bp5_get_local_dofs(bp5);
 
-  clock_t t0 = clock();
+  // Copy rhs to device buffer.
+  for (uint i = 0; i < n; i++)
+    r[i] = f[i];
+#pragma nomp update(to : r [0:n])
 
   scalar pap = 0;
   scalar rtz1 = 1, rtz2 = 0;
@@ -190,11 +195,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
   // Zero out the solution.
   zero(x, n);
 
-  // Copy rhs to device buffer
-  for (uint i = 0; i < n; i++)
-    r[i] = f[i];
-#pragma nomp update(to : r [0:n])
-
+  // Apply Dirichlet BCs to RHS.
   mask(r, n);
 
   // Run CG on the device.
@@ -211,8 +212,8 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, g, D, bp5->nelt, bp5->nx1, 6);
-    gs(w, bp5->gs_n);
+    ax(w, p, g, D, bp5->nelt, bp5->nx1);
+    gs(w, gs_off, gs_idx, bp5->gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
 

@@ -172,15 +172,15 @@ __global__ static void gs_kernel(scalar *v, const uint *gs_off,
   }
 }
 
-inline static void gs(scalar *d_v, const uint gs_n) {
+inline static void gs(scalar *d_v, const scalar *d_gs_off,
+                      const scalar *d_gs_idx, const uint gs_n) {
   const size_t global_size = (gs_n + local_size - 1) / local_size;
   gs_kernel<<<global_size, local_size>>>(d_v, d_gs_off, d_gs_idx, gs_n);
 }
 
 __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
                                      const scalar *g, const scalar *D,
-                                     const uint nelt, const uint nx1,
-                                     const scalar ngeo) {
+                                     const uint nelt, const uint nx1) {
   const uint ebase = blockIdx.x * nx1 * nx1 * nx1;
   const uint i = threadIdx.x;
   const uint j = threadIdx.y;
@@ -188,31 +188,32 @@ __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
 
   extern __shared__ scalar smem[];
   scalar *s_D = (scalar *)smem;
-  scalar *s_u = (scalar *)&s_D[nx1 * nx1];
-  scalar *s_ur = (scalar *)&s_u[nx1 * nx1 * nx1];
+  scalar *s_ur = (scalar *)&s_D[nx1 * nx1 * nx1];
   scalar *s_us = (scalar *)&s_ur[nx1 * nx1 * nx1];
   scalar *s_ut = (scalar *)&s_us[nx1 * nx1 * nx1];
 
-  s_u[BP5_IDX3(i, j, k)] = u[ebase + BP5_IDX3(i, j, k)];
   s_ur[BP5_IDX3(i, j, k)] = 0;
   s_us[BP5_IDX3(i, j, k)] = 0;
   s_ut[BP5_IDX3(i, j, k)] = 0;
   __syncthreads();
 
   for (uint l = 0; l < nx1; ++l) {
-    s_ur[BP5_IDX3(i, j, k)] += s_D[BP5_IDX2(i, l)] * s_u[BP5_IDX3(k, j, l)];
-    s_us[BP5_IDX3(i, j, k)] += s_D[BP5_IDX2(j, l)] * s_u[BP5_IDX3(k, l, i)];
-    s_ut[BP5_IDX3(i, j, k)] += s_D[BP5_IDX2(k, l)] * s_u[BP5_IDX3(l, j, i)];
+    s_ur[BP5_IDX3(i, j, k)] +=
+        s_D[BP5_IDX2(l, i)] * u[ebase + BP5_IDX3(l, j, k)];
+    s_us[BP5_IDX3(i, j, k)] +=
+        s_D[BP5_IDX2(l, j)] * u[ebase + BP5_IDX3(i, l, k)];
+    s_ut[BP5_IDX3(i, j, k)] +=
+        s_D[BP5_IDX2(l, k)] * u[ebase + BP5_IDX3(i, j, l)];
   }
   __syncthreads();
 
-  const uint gbase = ngeo * (ebase + BP5_IDX3(i, j, k));
-  scalar r_G00 = g[gbase + 0];
-  scalar r_G01 = g[gbase + 1];
-  scalar r_G02 = g[gbase + 2];
-  scalar r_G11 = g[gbase + 3];
-  scalar r_G12 = g[gbase + 4];
-  scalar r_G22 = g[gbase + 5];
+  const uint gbase = 6 * (ebase + BP5_IDX3(i, j, k));
+  scalar r_G00 = G[gbase + 0];
+  scalar r_G01 = G[gbase + 1];
+  scalar r_G02 = G[gbase + 2];
+  scalar r_G11 = G[gbase + 3];
+  scalar r_G12 = G[gbase + 4];
+  scalar r_G22 = G[gbase + 5];
 
   scalar wr = r_G00 * s_ur[BP5_IDX3(i, j, k)] +
               r_G01 * s_us[BP5_IDX3(i, j, k)] + r_G02 * s_ut[BP5_IDX3(i, j, k)];
@@ -229,20 +230,19 @@ __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
 
   scalar wo = 0;
   for (uint l = 0; l < nx1; l++) {
-    wo += s_D[BP5_IDX2(l, i)] * s_ur[BP5_IDX3(l, j, k)] +
-          s_D[BP5_IDX2(l, j)] * s_us[BP5_IDX3(i, l, k)] +
-          s_D[BP5_IDX2(l, k)] * s_ut[BP5_IDX3(i, j, l)];
+    wo += s_D[BP5_IDX2(i, l)] * s_ur[BP5_IDX3(l, j, k)] +
+          s_D[BP5_IDX2(j, l)] * s_us[BP5_IDX3(i, l, k)] +
+          s_D[BP5_IDX2(k, l)] * s_ut[BP5_IDX3(i, j, l)];
   }
   w[ebase + BP5_IDX3(i, j, k)] = wo;
 }
 
 inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
-                      const scalar *d_D, const uint nelt, const uint nx1,
-                      const scalar ngeo) {
+                      const scalar *d_D, const uint nelt, const uint nx1) {
   dim3 local_dim(nx1, nx1, nx1);
   dim3 global_dim(nelt);
   size_t shared_size = (4 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
-  ax_kernel_v00<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D, nelt, nx1, ngeo);
+  ax_kernel_v00<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D, nelt, nx1);
 }
 
 static void cuda_init(const struct bp5_t *bp5) {
@@ -274,42 +274,54 @@ static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
 
   clock_t t0 = clock();
 
-  // Copy rhs to device buffer r_mem.
   const uint n = bp5_get_local_dofs(bp5);
+
+  // Copy rhs to device buffer.
   check_driver(cudaMemcpy(d_r, r, n * sizeof(scalar), cudaMemcpyHostToDevice));
 
-  // Run CG on the device.
+  scalar pap = 0;
   scalar rtz1 = 1, rtz2 = 0;
-  mask(d_r, n);
+
+  // Zero out the solution.
   zero(d_x, n);
-  scalar r0 = glsc3(d_r, d_r, d_c, n);
+
+  // Apply Dirichlet BCs to RHS.
+  mask(d_r, n);
+
+  // Run CG on the device.
+  scalar rnorm = sqrt(glsc3(d_r, d_r, d_c, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
+    // Preconditioner (which is just a copy for now).
     copy(d_z, d_r, n);
 
     rtz2 = rtz1;
-    rtz1 = glsc3(d_r, d_z, d_c, n);
+    rtz1 = glsc3(d_r, d_c, d_z, n);
 
     scalar beta = rtz1 / rtz2;
     if (i == 0)
       beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-    ax(d_w, d_p, d_g, d_D, bp5->nelt, bp5->nx1, 6);
-    gs(d_w, bp5->gs_n);
+    ax(d_w, d_p, d_g, d_D, bp5->nelt, bp5->nx1);
+    gs(d_w, d_gs_off, d_gs_idx, bp5->gs_n);
     add2s2(d_w, d_p, 0.1, n);
     mask(d_w, n);
 
-    scalar pap = glsc3(d_w, d_p, d_c, n);
+    pap = glsc3(d_w, d_c, d_p, n);
+
     scalar alpha = rtz1 / pap;
     add2s2(d_x, d_p, alpha, n);
     add2s2(d_r, d_w, -alpha, n);
+
+    scalar rtr = glsc3(r, c, r, n);
+    rnorm = sqrt(rtr);
   }
   check_driver(cudaDeviceSynchronize());
   clock_t t1 = clock() - t0;
 
   bp5_debug(bp5->verbose, "done.\n");
   bp5_debug(bp5->verbose, "cuda_run: Iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "cuda_run: Residual = %e %e.\n", r0, rtz2);
+  bp5_debug(bp5->verbose, "cuda_run: Residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1) / CLOCKS_PER_SEC;
 }
