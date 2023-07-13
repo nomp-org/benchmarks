@@ -2,19 +2,20 @@
 
 static uint initialized = 0;
 
-static const char *ERR_STR_CUDA_FAILURE = "CUDA %s failure: %s.\n";
+static const char *ERR_STR_CUDA_FAILURE = "%s:%d CUDA %s failure: %s.\n";
 
-#define check_error(CALL, ERR_T, SUCCES, GET_ERR, OP)                          \
+#define check_error(FNAME, LINE, CALL, ERR_T, SUCCES, GET_ERR, OP)             \
   {                                                                            \
     ERR_T result_ = (CALL);                                                    \
     if (result_ != SUCCES) {                                                   \
       const char *msg = GET_ERR(result_);                                      \
-      bp5_error(ERR_STR_CUDA_FAILURE, OP, msg);                                \
+      bp5_error(ERR_STR_CUDA_FAILURE, FNAME, LINE, OP, msg);                   \
     }                                                                          \
   }
 
 #define check_driver(call)                                                     \
-  check_error(call, cudaError_t, cudaSuccess, cudaGetErrorName, "driver");
+  check_error(__FILE__, __LINE__, call, cudaError_t, cudaSuccess,              \
+              cudaGetErrorName, "driver");
 
 static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
 static scalar *d_c, *d_g, *d_D;
@@ -24,23 +25,24 @@ static scalar *d_wrk, *wrk;
 static void cuda_mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "cuda_mem_init: Copy problem data to device ... ");
 
+  const uint n = bp5_get_local_dofs(bp5);
+
   // Allocate device buffers and copy problem data to device.
-  uint dofs = bp5_get_local_dofs(bp5);
-  check_driver(cudaMalloc(&d_r, dofs * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_x, dofs * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_z, dofs * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_p, dofs * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_w, dofs * sizeof(scalar)));
+  check_driver(cudaMalloc(&d_r, n * sizeof(scalar)));
+  check_driver(cudaMalloc(&d_x, n * sizeof(scalar)));
+  check_driver(cudaMalloc(&d_z, n * sizeof(scalar)));
+  check_driver(cudaMalloc(&d_p, n * sizeof(scalar)));
+  check_driver(cudaMalloc(&d_w, n * sizeof(scalar)));
 
   // Copy multiplicity array.
-  check_driver(cudaMalloc(&d_c, dofs * sizeof(scalar)));
+  check_driver(cudaMalloc(&d_c, n * sizeof(scalar)));
   check_driver(
-      cudaMemcpy(d_c, bp5->c, dofs * sizeof(scalar), cudaMemcpyHostToDevice));
+      cudaMemcpy(d_c, bp5->c, n * sizeof(scalar), cudaMemcpyHostToDevice));
 
   // Copy geometric factors and derivative matrix.
-  check_driver(cudaMalloc(&d_g, 6 * dofs * sizeof(scalar)));
-  check_driver(cudaMemcpy(d_g, bp5->g, 6 * dofs * sizeof(scalar),
-                          cudaMemcpyHostToDevice));
+  check_driver(cudaMalloc(&d_g, 6 * n * sizeof(scalar)));
+  check_driver(
+      cudaMemcpy(d_g, bp5->g, 6 * n * sizeof(scalar), cudaMemcpyHostToDevice));
 
   check_driver(cudaMalloc(&d_D, bp5->nx1 * bp5->nx1 * sizeof(scalar)));
   check_driver(cudaMemcpy(d_D, bp5->D, bp5->nx1 * bp5->nx1 * sizeof(scalar),
@@ -57,8 +59,8 @@ static void cuda_mem_init(const struct bp5_t *bp5) {
                           cudaMemcpyHostToDevice));
 
   // Work array.
-  wrk = bp5_calloc(scalar, dofs);
-  check_driver(cudaMalloc(&d_wrk, dofs * sizeof(scalar)));
+  wrk = bp5_calloc(scalar, n);
+  check_driver(cudaMalloc(&d_wrk, n * sizeof(scalar)));
 
   bp5_debug(bp5->verbose, "done.\n");
 }
@@ -188,13 +190,15 @@ __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
 
   extern __shared__ scalar smem[];
   scalar *s_D = (scalar *)smem;
-  scalar *s_ur = (scalar *)&s_D[nx1 * nx1 * nx1];
+  scalar *s_ur = (scalar *)&s_D[nx1 * nx1];
   scalar *s_us = (scalar *)&s_ur[nx1 * nx1 * nx1];
   scalar *s_ut = (scalar *)&s_us[nx1 * nx1 * nx1];
 
   s_ur[BP5_IDX3(i, j, k)] = 0;
   s_us[BP5_IDX3(i, j, k)] = 0;
   s_ut[BP5_IDX3(i, j, k)] = 0;
+  if (k == 0)
+    s_D[BP5_IDX2(i, j)] = D[BP5_IDX2(i, j)];
   __syncthreads();
 
   for (uint l = 0; l < nx1; ++l) {
@@ -289,7 +293,7 @@ static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
   mask(d_r, n);
 
   // Run CG on the device.
-  scalar rnorm = sqrt(glsc3(d_r, d_r, d_c, n)), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(d_r, d_c, d_r, n)), r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(d_z, d_r, n);
