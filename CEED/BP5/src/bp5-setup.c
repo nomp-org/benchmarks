@@ -38,7 +38,7 @@ static uint log_2(const uint x) {
   uint x_ = x;
   while (x_ >>= 1)
     l++;
-  bp5_assert((1 << l) == x, "x must be a power of 2.");
+  bp5_assert((1 << l) == (int)x, "x must be a power of 2.");
   return l;
 }
 

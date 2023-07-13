@@ -159,9 +159,9 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
 }
 
 static void nomp_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "nomp_init: Initializing NOMP backend ...\n");
   if (initialized)
     return;
+  bp5_debug(bp5->verbose, "nomp_init: Initializing NOMP backend ...\n");
 
   const int argc = 6;
   char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "cuda",
@@ -224,7 +224,7 @@ static scalar nomp_run(const struct bp5_t *bp5, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
+    bp5_debug(bp5->verbose, "nomp_run: Iteration %d, rnorm = %e\n", i, rnorm);
   }
 #pragma nomp sync
   clock_t t1 = clock();

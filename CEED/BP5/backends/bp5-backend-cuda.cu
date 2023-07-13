@@ -1,8 +1,8 @@
-#include "bp5-impl.h"
+#include "bp5-backend.h"
 
 static uint initialized = 0;
 
-static const char *ERR_STR_CUDA_FAILURE = "Cuda %s failure: %s.";
+static const char *ERR_STR_CUDA_FAILURE = "CUDA %s failure: %s.\n";
 
 #define check_error(CALL, ERR_T, SUCCES, GET_ERR, OP)                          \
   {                                                                            \
@@ -172,14 +172,14 @@ __global__ static void gs_kernel(scalar *v, const uint *gs_off,
   }
 }
 
-inline static void gs(scalar *d_v, const scalar *d_gs_off,
-                      const scalar *d_gs_idx, const uint gs_n) {
+inline static void gs(scalar *d_v, const uint *d_gs_off, const uint *d_gs_idx,
+                      const uint gs_n) {
   const size_t global_size = (gs_n + local_size - 1) / local_size;
   gs_kernel<<<global_size, local_size>>>(d_v, d_gs_off, d_gs_idx, gs_n);
 }
 
 __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
-                                     const scalar *g, const scalar *D,
+                                     const scalar *G, const scalar *D,
                                      const uint nelt, const uint nx1) {
   const uint ebase = blockIdx.x * nx1 * nx1 * nx1;
   const uint i = threadIdx.x;
@@ -242,14 +242,15 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
   dim3 local_dim(nx1, nx1, nx1);
   dim3 global_dim(nelt);
   const size_t shared_size = (3 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
-  ax_kernel_v00<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D, nelt, nx1);
+  ax_kernel_v00<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D,
+                                                        nelt, nx1);
 }
 
 static void cuda_init(const struct bp5_t *bp5) {
   if (initialized)
     return;
+  bp5_debug(bp5->verbose, "cuda_init: Initializing CUDA backend ...\n");
 
-  bp5_debug(bp5->verbose, "cuda_init: Initializing CUDA backend ... ");
   int num_devices = 0;
   check_driver(cudaGetDeviceCount(&num_devices));
   if (bp5->device_id >= (uint)num_devices) {
@@ -263,18 +264,17 @@ static void cuda_init(const struct bp5_t *bp5) {
   cuda_mem_init(bp5);
 
   initialized = 1;
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "cuda_init: done.\n");
 }
 
 static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
   if (!initialized)
-    bp5_error("cuda_run: CUDA backend is not initialized.");
-
-  bp5_debug(bp5->verbose, "cuda_run: ... ");
-
-  clock_t t0 = clock();
+    bp5_error("cuda_run: CUDA backend is not initialized.\n");
 
   const uint n = bp5_get_local_dofs(bp5);
+  bp5_debug(bp5->verbose, "cuda_run: ... n=%u\n", n);
+
+  clock_t t0 = clock();
 
   // Copy rhs to device buffer.
   check_driver(cudaMemcpy(d_r, r, n * sizeof(scalar), cudaMemcpyHostToDevice));
@@ -313,13 +313,14 @@ static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
     add2s2(d_x, d_p, alpha, n);
     add2s2(d_r, d_w, -alpha, n);
 
-    scalar rtr = glsc3(r, c, r, n);
+    scalar rtr = glsc3(d_r, d_c, d_r, n);
     rnorm = sqrt(rtr);
+    bp5_debug(bp5->verbose, "cuda_run: Iteration %d, rnorm = %e\n", i, rnorm);
   }
   check_driver(cudaDeviceSynchronize());
   clock_t t1 = clock() - t0;
 
-  bp5_debug(bp5->verbose, "done.\n");
+  bp5_debug(bp5->verbose, "cuda_run: done.\n");
   bp5_debug(bp5->verbose, "cuda_run: Iterations = %d.\n", bp5->max_iter);
   bp5_debug(bp5->verbose, "cuda_run: Residual = %e %e.\n", r0, rnorm);
 

@@ -514,9 +514,9 @@ static void gs(cl_mem *x, const cl_mem *gs_off, const cl_mem *gs_idx,
 }
 
 static void opencl_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "opencl_init: Initializing OpenCL backend ...\n");
   if (initialized)
     return;
+  bp5_debug(bp5->verbose, "opencl_init: Initializing OpenCL backend ...\n");
 
   opencl_device_init(bp5);
   opencl_kernels_init(bp5->verbose);
@@ -576,7 +576,7 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
 
     scalar rtr = glsc3(&r_mem, &c_mem, &r_mem, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "opencl_run: iteration %d, rnorm = %e\n", i, rnorm);
+    bp5_debug(bp5->verbose, "opencl_run: Iteration %d, rnorm = %e\n", i, rnorm);
   }
   clFinish(ocl_queue);
   clock_t t1 = clock();
