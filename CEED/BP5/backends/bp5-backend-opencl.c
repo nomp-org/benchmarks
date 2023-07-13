@@ -415,6 +415,7 @@ static scalar glsc3(cl_mem *a, cl_mem *b, cl_mem *c, const uint n) {
   check(clEnqueueNDRangeKernel(ocl_queue, glsc3_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(glsc3)");
+  check(clFinish(ocl_queue), "clFinish(glsc3)");
 
   check(clEnqueueReadBuffer(ocl_queue, wrk_mem, CL_TRUE, 0,
                             sizeof(scalar) * block_size, wrk, 0, NULL, NULL),
@@ -578,7 +579,7 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
     rnorm = sqrt(rtr);
     bp5_debug(bp5->verbose, "opencl_run: Iteration %d, rnorm = %e\n", i, rnorm);
   }
-  clFinish(ocl_queue);
+  check(clFinish(ocl_queue), "clFinish(cg)");
   clock_t t1 = clock();
 
   bp5_debug(bp5->verbose, "opencl_run: done.\n");
