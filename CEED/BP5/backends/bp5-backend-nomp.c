@@ -37,6 +37,23 @@ static void mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "mem_init: done.\n");
 }
 
+static void _nomp_init(const struct bp5_t *bp5) {
+  if (initialized)
+    return;
+  bp5_debug(bp5->verbose, "_nomp_init: Initializing NOMP backend ...\n");
+
+  const int argc = 6;
+  char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "cuda",
+                  "--nomp-verbose",   "0"};
+
+#pragma nomp init(argc, argv)
+
+  mem_init(bp5);
+
+  initialized = 1;
+  bp5_debug(bp5->verbose, "_nomp_init: done.\n");
+}
+
 inline static void zero(scalar *v, const uint n) {
 #pragma nomp for
   for (uint i = 0; i < n; i++)
@@ -159,23 +176,6 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
       }
     }
   }
-}
-
-static void _nomp_init(const struct bp5_t *bp5) {
-  if (initialized)
-    return;
-  bp5_debug(bp5->verbose, "_nomp_init: Initializing NOMP backend ...\n");
-
-  const int argc = 6;
-  char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "cuda",
-                  "--nomp-verbose",   "0"};
-
-#pragma nomp init(argc, argv)
-
-  mem_init(bp5);
-
-  initialized = 1;
-  bp5_debug(bp5->verbose, "_nomp_init: done.\n");
 }
 
 static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {

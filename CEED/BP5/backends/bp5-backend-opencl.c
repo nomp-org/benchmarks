@@ -143,10 +143,10 @@ static const char *knl_src =
     "  const uint j = get_local_id(1);                                     \n"
     "  const uint k = get_local_id(2);                                     \n"
     "                                                                      \n"
-    "  scalar *s_D = smem;                                                 \n"
-    "  scalar *s_ur = (scalar *)&s_D[nx1 * nx1 * nx1];                     \n"
-    "  scalar *s_us = (scalar *)&s_ur[nx1 * nx1 * nx1];                    \n"
-    "  scalar *s_ut = (scalar *)&s_us[nx1 * nx1 * nx1];                    \n"
+    "  __local scalar *s_D = smem;                                         \n"
+    "  __local scalar *s_ur = (__local scalar *)&s_D[nx1 * nx1 * nx1];     \n"
+    "  __local scalar *s_us = (__local scalar *)&s_ur[nx1 * nx1 * nx1];    \n"
+    "  __local scalar *s_ut = (__local scalar *)&s_us[nx1 * nx1 * nx1];    \n"
     "                                                                      \n"
     "  s_ur[IDX3(i, j, k)] = 0;                                            \n"
     "  s_us[IDX3(i, j, k)] = 0;                                            \n"
@@ -335,7 +335,7 @@ static const size_t local_size = 512;
 
 static void opencl_kernels_init(const uint verbose) {
   // Build OpenCL kernels.
-  bp5_debug(verbose, "opencl_kernels_init: Build kernels ...\n");
+  bp5_debug(verbose, "opencl_kernels_init: Compile kernels ...\n");
   cl_int err;
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
