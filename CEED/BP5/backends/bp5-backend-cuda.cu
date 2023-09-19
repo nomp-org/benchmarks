@@ -23,7 +23,7 @@ static uint *d_gs_off, *d_gs_idx;
 static scalar *d_wrk, *wrk;
 
 static void cuda_mem_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "cuda_mem_init: Copy problem data to device ... ");
+  bp5_debug(bp5->verbose, "cuda_mem_init: copy problem data to device ... ");
 
   const uint n = bp5_get_local_dofs(bp5);
 
@@ -253,7 +253,7 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
 static void cuda_init(const struct bp5_t *bp5) {
   if (initialized)
     return;
-  bp5_debug(bp5->verbose, "cuda_init: Initializing CUDA backend ...\n");
+  bp5_debug(bp5->verbose, "cuda_init: initializing Cuda backend ...\n");
 
   int num_devices = 0;
   check_driver(cudaGetDeviceCount(&num_devices));
@@ -319,14 +319,14 @@ static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "cuda_run: Iteration %d, rnorm = %e\n", i, rnorm);
+    bp5_debug(bp5->verbose, "cuda_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
   check_driver(cudaDeviceSynchronize());
   clock_t t1 = clock() - t0;
 
   bp5_debug(bp5->verbose, "cuda_run: done.\n");
-  bp5_debug(bp5->verbose, "cuda_run: Iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "cuda_run: Residual = %e %e.\n", r0, rnorm);
+  bp5_debug(bp5->verbose, "cuda_run: iterations = %d.\n", bp5->max_iter);
+  bp5_debug(bp5->verbose, "cuda_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1) / CLOCKS_PER_SEC;
 }

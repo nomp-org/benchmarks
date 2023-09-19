@@ -9,7 +9,7 @@ static scalar *wrk;
 static uint dofs, nx1;
 
 static void mem_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "mem_init: Copy problem data to device ...\n");
+  bp5_debug(bp5->verbose, "mem_init: copy problem data to device ...\n");
 
   // We allocate following arrays used in CG on both host and device.
   // Techinically we don't need the host arrays if we always run on the device.
@@ -40,11 +40,11 @@ static void mem_init(const struct bp5_t *bp5) {
 static void _nomp_init(const struct bp5_t *bp5) {
   if (initialized)
     return;
-  bp5_debug(bp5->verbose, "_nomp_init: Initializing NOMP backend ...\n");
+  bp5_debug(bp5->verbose, "_nomp_init: initializing nomp backend ...\n");
 
   const int argc = 6;
-  char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "cuda",
-                  "--nomp-verbose",   "0"};
+  char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "opencl",
+                  "--nomp-verbose",   "1"};
 
 #pragma nomp init(argc, argv)
 
@@ -180,8 +180,9 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
 
 static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   if (!initialized)
-    bp5_error("_nomp_run: NOMP backend is not initialized.\n");
+    bp5_error("_nomp_run: nomp backend is not initialized.\n");
 
+#if 0
   const uint n = bp5_get_local_dofs(bp5);
   bp5_debug(bp5->verbose, "_nomp_run: ... n=%u\n", n);
 
@@ -228,16 +229,17 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "_nomp_run: Iteration %d, rnorm = %e\n", i, rnorm);
+    bp5_debug(bp5->verbose, "_nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
 #pragma nomp sync
   clock_t t1 = clock();
 
   bp5_debug(bp5->verbose, "_nomp_run: done.\n");
-  bp5_debug(bp5->verbose, "_nomp_run: Iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "_nomp_run: Residual = %e %e.\n", r0, rnorm);
+  bp5_debug(bp5->verbose, "_nomp_run: iterations = %d.\n", bp5->max_iter);
+  bp5_debug(bp5->verbose, "_nomp_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
+#endif
 }
 
 static void _nomp_finalize(void) {
