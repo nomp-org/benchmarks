@@ -1,30 +1,30 @@
 #!/bin/bash
 
-if [ -z "${NOMP_INSTALL_DIR}" ]; then
-  echo "Error: NOMP_INSTALL_DIR is not defined !"
-  exit 1
+if [ -z "${NOMP_INSTALL_DIR}" ] || [ -z "${NOMP_CLANG_DIR}" ]; then
+  echo "Warning: One of NOMP_INSTALL_DIR or NOMP_CLANG_DIR is not defined."
+  export BP5_NOMP=OFF
+else
+  echo "Info: nomp backend is enabled."
+  export BP5_NOMP=ON
+  export NOMP_LIB_DIR=${NOMP_INSTALL_DIR}/lib
+  export NOMP_INC_DIR=${NOMP_INSTALL_DIR}/include
+
+  export BP5_CC=${NOMP_CLANG_DIR}/clang
+  export BP5_CFLAGS="-O3 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
+  export LDFLAGS="-Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp"
 fi
 
-if [ -z "${NOMP_CLANG_DIR}" ]; then
-  echo "Error: NOMP_CLANG_DIR is not defined !"
-  exit 1
-fi
-
-NOMP_LIB_DIR=${NOMP_INSTALL_DIR}/lib
-NOMP_INC_DIR=${NOMP_INSTALL_DIR}/include
-
-: ${BP5_CC:=${NOMP_CLANG_DIR}/bin/clang}
-: ${BP5_CFLAGS:=-O3 -fnomp -I${NOMP_INC_DIR} -include nomp.h -Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp}
+: ${BP5_CC:=clang}
+: ${BP5_CFLAGS:=-O3}
 : ${BP5_INSTALL_DIR:=`pwd`/install}
 : ${BP5_OPENCL:=ON}
 : ${BP5_CUDA:=OFF}
 : ${BP5_HIP:=OFF}
-: ${BP5_NOMP:=ON}
+: ${BP5_NOMP:=OFF}
 
 ### Don't touch anything that follows this line. ###
 BP5_CURRENT_DIR=`pwd`
 BP5_BUILD_DIR=${BP5_CURRENT_DIR}/build
-
 mkdir -p ${BP5_BUILD_DIR} 2> /dev/null
 
 cmake -DCMAKE_INSTALL_PREFIX=${BP5_INSTALL_DIR} \
