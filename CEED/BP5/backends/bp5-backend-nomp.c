@@ -6,7 +6,7 @@ static scalar *r, *x, *z, *p, *w;
 static const scalar *c, *g, *D;
 static const uint *gs_off, *gs_idx;
 static scalar *wrk;
-static uint dofs, nx1;
+static uint dofs, nx1, edofs;
 
 static void mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "mem_init: copy problem data to device ...\n");
@@ -31,8 +31,9 @@ static void mem_init(const struct bp5_t *bp5) {
 #pragma nomp update(to : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
   // Work array on device and host.
-  wrk = bp5_calloc(scalar, 6 * bp5_get_elem_dofs(bp5));
-#pragma nomp update(alloc : wrk[0, 6 * bp5_get_elem_dofs(bp5)])
+  edofs = bp5_get_elem_dofs(bp5);
+  wrk = bp5_calloc(scalar, 6 * edofs);
+#pragma nomp update(alloc : wrk[0, 6 * edofs])
 
   bp5_debug(bp5->verbose, "mem_init: done.\n");
 }
@@ -42,9 +43,9 @@ static void _nomp_init(const struct bp5_t *bp5) {
     return;
   bp5_debug(bp5->verbose, "_nomp_init: initializing nomp backend ...\n");
 
-  const int argc = 6;
-  char *argv[] = {"--nomp-device-id", "0", "--nomp-backend", "opencl",
-                  "--nomp-verbose",   "1"};
+  const int argc = 8;
+  char *argv[] = {"--nomp-device",  "0", "--nomp-backend",  "opencl",
+                  "--nomp-verbose", "3", "--nomp-platform", "0"};
 
 #pragma nomp init(argc, argv)
 
@@ -55,19 +56,19 @@ static void _nomp_init(const struct bp5_t *bp5) {
 }
 
 inline static void zero(scalar *v, const uint n) {
-#pragma nomp for
+#pragma nomp for transform("bp5", "gridloop")
   for (uint i = 0; i < n; i++)
     v[i] = 0;
 }
 
 inline static void copy(scalar *a, const scalar *b, const uint n) {
-#pragma nomp for
+#pragma nomp for transform("bp5", "gridloop")
   for (uint i = 0; i < n; i++)
     a[i] = b[i];
 }
 
 inline static void mask(scalar *v, const uint n) {
-#pragma nomp for
+#pragma nomp for transform("bp5", "gridloop")
   for (uint i = 0; i < n; i++) {
     if (i == 0)
       v[i] = 0;
@@ -76,14 +77,14 @@ inline static void mask(scalar *v, const uint n) {
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for
+#pragma nomp for transform("bp5", "gridloop")
   for (uint i = 0; i < n; i++)
     a[i] = c * a[i] + b[i];
 }
 
 inline static void add2s2(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for
+#pragma nomp for transform("bp5", "gridloop")
   for (uint i = 0; i < n; i++)
     a[i] += c * b[i];
 }
@@ -182,7 +183,6 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   if (!initialized)
     bp5_error("_nomp_run: nomp backend is not initialized.\n");
 
-#if 0
   const uint n = bp5_get_local_dofs(bp5);
   bp5_debug(bp5->verbose, "_nomp_run: ... n=%u\n", n);
 
@@ -203,7 +203,9 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   mask(r, n);
 
   // Run CG on the device.
-  scalar rnorm = sqrt(glsc3(r, c, r, n)), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(r, c, r, n));
+  scalar r0 = rnorm;
+#if 0
   for (uint i = 0; i < bp5->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(z, r, n);
@@ -231,6 +233,8 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
     rnorm = sqrt(rtr);
     bp5_debug(bp5->verbose, "_nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
+#endif
+
 #pragma nomp sync
   clock_t t1 = clock();
 
@@ -239,7 +243,6 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   bp5_debug(bp5->verbose, "_nomp_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
-#endif
 }
 
 static void _nomp_finalize(void) {
@@ -256,7 +259,7 @@ static void _nomp_finalize(void) {
 
 #pragma nomp update(free : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
-#pragma nomp update(free : wrk[0, 3 * dofs])
+#pragma nomp update(free : wrk[0, 6 * edofs])
   bp5_free(&wrk);
 
   initialized = 0;
