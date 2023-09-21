@@ -1,13 +1,15 @@
 #if !defined(__LIBBP5_IMPL_H__)
 #define __LIBBP5_IMPL_H__
 
-#include "bp5-types.h"
-#include "bp5.h"
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "bp5-defs.h"
+#include "bp5-types.h"
+#include "bp5.h"
 
 #define BP5_IDX2(i, j) ((i) + nx1 * (j))
 #define BP5_IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))

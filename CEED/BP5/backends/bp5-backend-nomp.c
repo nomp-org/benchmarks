@@ -43,9 +43,12 @@ static void _nomp_init(const struct bp5_t *bp5) {
     return;
   bp5_debug(bp5->verbose, "_nomp_init: initializing nomp backend ...\n");
 
-  const int argc = 8;
-  char *argv[] = {"--nomp-device",  "0", "--nomp-backend",  "opencl",
-                  "--nomp-verbose", "3", "--nomp-platform", "0"};
+  const int argc = 10;
+  char *argv[] = {"--nomp-device",      "0",
+                  "--nomp-backend",     "opencl",
+                  "--nomp-verbose",     "3",
+                  "--nomp-platform",    "0",
+                  "--nomp-scripts-dir", BP5_SCRIPTS_DIR};
 
 #pragma nomp init(argc, argv)
 
@@ -56,19 +59,19 @@ static void _nomp_init(const struct bp5_t *bp5) {
 }
 
 inline static void zero(scalar *v, const uint n) {
-#pragma nomp for transform("bp5", "gridloop")
+#pragma nomp for transform("bp5", "grid_loop")
   for (uint i = 0; i < n; i++)
     v[i] = 0;
 }
 
 inline static void copy(scalar *a, const scalar *b, const uint n) {
-#pragma nomp for transform("bp5", "gridloop")
+#pragma nomp for transform("bp5", "grid_loop")
   for (uint i = 0; i < n; i++)
     a[i] = b[i];
 }
 
 inline static void mask(scalar *v, const uint n) {
-#pragma nomp for transform("bp5", "gridloop")
+#pragma nomp for transform("bp5", "grid_loop")
   for (uint i = 0; i < n; i++) {
     if (i == 0)
       v[i] = 0;
@@ -77,21 +80,23 @@ inline static void mask(scalar *v, const uint n) {
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for transform("bp5", "gridloop")
+#pragma nomp for transform("bp5", "grid_loop")
   for (uint i = 0; i < n; i++)
     a[i] = c * a[i] + b[i];
 }
 
 inline static void add2s2(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for transform("bp5", "gridloop")
+#pragma nomp for transform("bp5", "grid_loop")
   for (uint i = 0; i < n; i++)
     a[i] += c * b[i];
 }
 
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
                            const uint n) {
-  scalar wrk[1] = {0};
+  // FIXME: This doesn't work with nompcc: scalar wrk[1] = {0};
+  scalar wrk[1];
+  wrk[0] = 0;
 #pragma nomp for reduce("wrk", "+")
   for (uint i = 0; i < n; i++)
     wrk[0] += a[i] * b[i] * c[i];
@@ -205,8 +210,7 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
   scalar r0 = rnorm;
-#if 0
-  for (uint i = 0; i < bp5->max_iter; ++i) {
+  for (uint i = 0; i < 1; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(z, r, n);
 
@@ -218,8 +222,8 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, g, D, bp5->nelt, nx1);
-    gs(w, gs_off, gs_idx, bp5->gs_n);
+    // ax(w, p, g, D, bp5->nelt, nx1);
+    // gs(w, gs_off, gs_idx, bp5->gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
 
@@ -233,7 +237,6 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
     rnorm = sqrt(rtr);
     bp5_debug(bp5->verbose, "_nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
-#endif
 
 #pragma nomp sync
   clock_t t1 = clock();

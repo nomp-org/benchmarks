@@ -1,0 +1,6 @@
+#if !defined(BP5_DEFS_H)
+#define BP5_DEFS_H
+
+#define BP5_SCRIPTS_DIR "@BP5_SCRIPTS_DIR@"
+
+#endif // BP5_DEFS_H
