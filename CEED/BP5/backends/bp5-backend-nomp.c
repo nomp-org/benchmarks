@@ -105,13 +105,13 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
 
 inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
                       const uint gs_n) {
-#pragma nomp for
+#pragma nomp for transform("bp5", "gs")
   for (uint i = 0; i < gs_n; i++) {
     scalar s = 0;
     for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
       s += v[gs_idx[j]];
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
-      v[gs_idx[j]] = s;
+    for (uint k = gs_off[i]; k < gs_off[i + 1]; k++)
+      v[gs_idx[k]] = s;
   }
 }
 
@@ -223,7 +223,7 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
     add2s1(p, z, beta, n);
 
     // ax(w, p, g, D, bp5->nelt, nx1);
-    // gs(w, gs_off, gs_idx, bp5->gs_n);
+    gs(w, gs_off, gs_idx, bp5->gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
 
