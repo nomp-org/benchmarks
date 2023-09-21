@@ -1,4 +1,4 @@
-#include "bp5-backend.h"
+#include <string.h>
 
 #define CL_TARGET_OPENCL_VERSION 220
 #ifdef __APPLE__
@@ -6,6 +6,8 @@
 #else
 #include <CL/cl.h>
 #endif
+
+#include "bp5-backend.h"
 
 static uint initialized = 0;
 
@@ -58,52 +60,45 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
     }                                                                          \
   }
 
-static const char *knl_src =
+static const char *header_src =
     "#define scalar double                                                 \n"
+    "                                                                      \n"
     "#define IDX2(i, j) ((i) + nx1 * (j))                                  \n"
     "#define IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))                 \n"
     "                                                                      \n"
+    "#define gid get_global_id(0)                                          \n"
+    "#define lid get_local_id(0)                                           \n";
+
+static const char *stream_knl_src =
     "__kernel void mask(__global scalar *v) {                              \n"
-    "  const int gid = get_global_id(0);                                   \n"
     "  if (gid == 0)                                                       \n"
     "    v[gid] = 0.0;                                                     \n"
     "}                                                                     \n"
-    "                                                                      \n"
     "__kernel void zero(__global scalar *v, const uint n) {                \n"
-    "  const int gid = get_global_id(0);                                   \n"
     "  if (gid < n)                                                        \n"
     "    v[gid] = 0.0;                                                     \n"
     "}                                                                     \n"
-    "                                                                      \n"
     "__kernel void copy(__global scalar *dst, __global const scalar *src,  \n"
     "                   const uint n) {                                    \n"
-    "  const int gid = get_global_id(0);                                   \n"
     "  if (gid < n)                                                        \n"
     "    dst[gid] = src[gid];                                              \n"
     "}                                                                     \n"
-    "                                                                      \n"
     "__kernel void add2s1(__global scalar *a, __global const scalar *b,    \n"
     "                     const scalar c, const uint n) {                  \n"
-    "  const int gid = get_global_id(0);                                   \n"
     "  if (gid < n)                                                        \n"
     "    a[gid] = c * a[gid] + b[gid];                                     \n"
     "}                                                                     \n"
-    "                                                                      \n"
     "__kernel void add2s2(__global scalar *a, __global const scalar *b,    \n"
     "                     const scalar c, const uint n) {                  \n"
-    "  const int gid = get_global_id(0);                                   \n"
     "  if (gid < n)                                                        \n"
     "    a[gid] += c * b[gid];                                             \n"
     "}                                                                     \n"
-    "                                                                      \n"
     "__kernel void glsc3(__global scalar *out,                             \n"
     "                    __global const scalar *a,                         \n"
     "                    __global const scalar *b,                         \n"
     "                    __global const scalar *c,                         \n"
     "                    __local scalar *s_abc,                            \n"
     "                    const uint n) {                                   \n"
-    "  int gid = get_global_id(0);                                         \n"
-    "  int lid = get_local_id(0);                                          \n"
     "  if (gid < n)                                                        \n"
     "    s_abc[lid] = a[gid] * b[gid] * c[gid];                            \n"
     "  else                                                                \n"
@@ -119,7 +114,6 @@ static const char *knl_src =
     "  if (lid == 0)                                                       \n"
     "    out[get_group_id(0)] = s_abc[0];                                  \n"
     "}                                                                     \n"
-    "                                                                      \n"
     "__kernel void gs(__global scalar *v, __global const uint *gs_off,     \n"
     "                 __global const uint *gs_idx, const uint gs_n) {      \n"
     "  int i = get_global_id(0);                                           \n"
@@ -130,8 +124,9 @@ static const char *knl_src =
     "    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)                  \n"
     "      v[gs_idx[j]] = s;                                               \n"
     "  }                                                                   \n"
-    "}                                                                     \n"
-    "                                                                      \n"
+    "}                                                                     \n";
+
+static const char *ax_knl_src =
     "__kernel void ax_kernel_v00(__global scalar *w,                       \n"
     "                            __global const scalar *u,                 \n"
     "                            __global const scalar *G,                 \n"
@@ -193,8 +188,7 @@ static const char *knl_src =
     "          s_D[IDX2(k, l)] * s_ut[IDX3(i, j, l)];                      \n"
     "  }                                                                   \n"
     "  w[ebase + IDX3(i, j, k)] = wo;                                      \n"
-    "}                                                                     \n"
-    "                                                                      \n";
+    "}                                                                     \n";
 
 // OpenCL device, context, queue and program.
 static cl_device_id ocl_device;
@@ -332,13 +326,25 @@ static cl_kernel glsc3_kernel, add2s1_kernel, add2s2_kernel;
 static cl_kernel ax_kernel, gs_kernel;
 static const size_t local_size = 512;
 
+static void print_program_build_log() {}
+
 static void opencl_kernels_init(const uint verbose) {
   // Build OpenCL kernels.
   bp5_debug(verbose, "opencl_kernels_init: compile kernels ...\n");
+
+  size_t size =
+      strlen(header_src) + strlen(stream_knl_src) + strlen(ax_knl_src);
+  char *knl_src = bp5_calloc(char, size + 1);
+  strcpy(knl_src, header_src);
+  strcpy(knl_src + strlen(header_src), stream_knl_src);
+  strcpy(knl_src + strlen(header_src) + strlen(stream_knl_src), ax_knl_src);
+
   cl_int err;
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
   check(err, "clCreateProgramWithSource");
+  bp5_free(&knl_src);
+
   err = clBuildProgram(ocl_program, 1, &ocl_device, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
     size_t log_size;
