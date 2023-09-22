@@ -66,32 +66,33 @@ static const char *header_src =
     "#define IDX2(i, j) ((i) + nx1 * (j))                                  \n"
     "#define IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))                 \n"
     "                                                                      \n"
-    "#define gid get_global_id(0)                                          \n"
-    "#define lid get_local_id(0)                                           \n";
+    "#define glo(N) get_global_id(N)                                       \n"
+    "#define lid(N) get_local_id(N)                                        \n"
+    "#define gid(N) get_group_id(N)                                        \n";
 
 static const char *stream_knl_src =
     "__kernel void mask(__global scalar *v) {                              \n"
-    "  if (gid == 0)                                                       \n"
-    "    v[gid] = 0.0;                                                     \n"
+    "  if (glo(0) == 0)                                                    \n"
+    "    v[glo(0)] = 0.0;                                                  \n"
     "}                                                                     \n"
     "__kernel void zero(__global scalar *v, const uint n) {                \n"
-    "  if (gid < n)                                                        \n"
-    "    v[gid] = 0.0;                                                     \n"
+    "  if (glo(0) < n)                                                     \n"
+    "    v[glo(0)] = 0.0;                                                  \n"
     "}                                                                     \n"
     "__kernel void copy(__global scalar *dst, __global const scalar *src,  \n"
     "                   const uint n) {                                    \n"
-    "  if (gid < n)                                                        \n"
-    "    dst[gid] = src[gid];                                              \n"
+    "  if (glo(0) < n)                                                     \n"
+    "    dst[glo(0)] = src[glo(0)];                                        \n"
     "}                                                                     \n"
     "__kernel void add2s1(__global scalar *a, __global const scalar *b,    \n"
     "                     const scalar c, const uint n) {                  \n"
-    "  if (gid < n)                                                        \n"
-    "    a[gid] = c * a[gid] + b[gid];                                     \n"
+    "  if (glo(0) < n)                                                     \n"
+    "    a[glo(0)] = c * a[glo(0)] + b[glo(0)];                            \n"
     "}                                                                     \n"
     "__kernel void add2s2(__global scalar *a, __global const scalar *b,    \n"
     "                     const scalar c, const uint n) {                  \n"
-    "  if (gid < n)                                                        \n"
-    "    a[gid] += c * b[gid];                                             \n"
+    "  if (glo(0) < n)                                                     \n"
+    "    a[glo(0)] += c * b[glo(0)];                                       \n"
     "}                                                                     \n"
     "__kernel void glsc3(__global scalar *out,                             \n"
     "                    __global const scalar *a,                         \n"
@@ -99,22 +100,24 @@ static const char *stream_knl_src =
     "                    __global const scalar *c,                         \n"
     "                    __local scalar *s_abc,                            \n"
     "                    const uint n) {                                   \n"
-    "  if (gid < n)                                                        \n"
-    "    s_abc[lid] = a[gid] * b[gid] * c[gid];                            \n"
+    "  if (glo(0) < n)                                                     \n"
+    "    s_abc[lid(0)] = a[glo(0)] * b[glo(0)] * c[glo(0)];                \n"
     "  else                                                                \n"
-    "   s_abc[lid] = 0.0;                                                  \n"
+    "   s_abc[lid(0)] = 0.0;                                               \n"
     "                                                                      \n"
     "  for (uint s = get_local_size(0) / 2; s > 0; s >>= 1) {              \n"
     "    barrier(CLK_LOCAL_MEM_FENCE);                                     \n"
-    "    if (lid < s)                                                      \n"
-    "      s_abc[lid] += s_abc[lid + s];                                   \n"
+    "    if (lid(0) < s)                                                   \n"
+    "      s_abc[lid(0)] += s_abc[lid(0) + s];                             \n"
     "  }                                                                   \n"
     "  barrier(CLK_LOCAL_MEM_FENCE);                                       \n"
     "                                                                      \n"
-    "  if (lid == 0)                                                       \n"
+    "  if (lid(0) == 0)                                                    \n"
     "    out[get_group_id(0)] = s_abc[0];                                  \n"
-    "}                                                                     \n"
-    "__kernel void gs(__global scalar *v, __global const uint *gs_off,     \n"
+    "}                                                                     \n";
+
+static const char *gs_knl_src =
+    "__kernel void gs_v00(__global scalar *v, __global const uint *gs_off, \n"
     "                 __global const uint *gs_idx, const uint gs_n) {      \n"
     "  int i = get_global_id(0);                                           \n"
     "  if (i < gs_n) {                                                     \n"
@@ -123,6 +126,56 @@ static const char *stream_knl_src =
     "      s += v[gs_idx[j]];                                              \n"
     "    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)                  \n"
     "      v[gs_idx[j]] = s;                                               \n"
+    "  }                                                                   \n"
+    "}                                                                     \n"
+    "__kernel void __attribute__ ((reqd_work_group_size(32, 1, 1))) "
+    "gs_v01(__global double *__restrict__ v, __global uint const "
+    "*__restrict__ gs_off, __global uint const *__restrict__ gs_idx, uint "
+    "const gs_n)\n"
+    "{                                                                     \n"
+    "  uint _nomp_var;                                                     \n"
+    "  uint _nomp_var_0;                                                   \n"
+    "  uint _nomp_var_1;                                                   \n"
+    "  uint _nomp_var_2;                                                   \n"
+    "  double s;                                                           \n"
+    "                                                                      \n"
+    "  if (-1 + -32 * gid(0) + -1 * lid(0) + gs_n >= 0) 		       "
+    "        \n"
+    "  {                                                                   \n"
+    "    s = 0;                                                            \n"
+    "    _nomp_var = gs_off[32 * gid(0) + lid(0)];                         \n"
+    "    _nomp_var_0 = gs_off[1 + 32 * gid(0) + lid(0)];                   \n"
+    "    for (uint j = _nomp_var; j <= -1 + _nomp_var_0; ++j)              \n"
+    "      s = s + v[gs_idx[j]];                                           \n"
+    "    _nomp_var_1 = gs_off[32 * gid(0) + lid(0)];                       \n"
+    "    _nomp_var_2 = gs_off[1 + 32 * gid(0) + lid(0)];                   \n"
+    "    //for (uint k = _nomp_var_1; k <= -1 + _nomp_var_2; ++k)            \n"
+    "    //  v[gs_idx[k]] = 0;                                               \n"
+    "  }                                                                   \n"
+    "}                                                                     \n"
+    "__kernel void __attribute__ ((reqd_work_group_size(32, 1, 1))) "
+    "gs_v02(__global double *__restrict__ v, __global uint const "
+    "*__restrict__ gs_off, __global uint const *__restrict__ gs_idx, uint "
+    "const gs_n)\n"
+    "{                                                                     \n"
+    "  int _nomp_var;                                                      \n"
+    "  int _nomp_var_0;                                                    \n"
+    "  int _nomp_var_1;                                                    \n"
+    "  int _nomp_var_2;                                                    \n"
+    "  double s;                                                           \n"
+    "                                                                      \n"
+    "  if (-1 + -32 * gid(0) + -1 * lid(0) + gs_n >= 0) 		       "
+    "        \n"
+    "  {                                                                   \n"
+    "    s = 0;                                                            \n"
+    "    _nomp_var = gs_off[32 * gid(0) + lid(0)];                         \n"
+    "    _nomp_var_0 = gs_off[1 + 32 * gid(0) + lid(0)];                   \n"
+    "    for (int j = _nomp_var; j <= -1 + _nomp_var_0; ++j)               \n"
+    "      s = s + v[gs_idx[j]];                                           \n"
+    "    _nomp_var_1 = gs_off[32 * gid(0) + lid(0)];                       \n"
+    "    _nomp_var_2 = gs_off[1 + 32 * gid(0) + lid(0)];                   \n"
+    "    for (int k = _nomp_var_1; k <= -1 + _nomp_var_2; ++k)             \n"
+    "      v[gs_idx[k]] = s;                                               \n"
     "  }                                                                   \n"
     "}                                                                     \n";
 
@@ -324,18 +377,22 @@ static cl_program ocl_program;
 static cl_kernel mask_kernel, zero_kernel, copy_kernel;
 static cl_kernel glsc3_kernel, add2s1_kernel, add2s2_kernel;
 static cl_kernel ax_kernel, gs_kernel;
-static const size_t local_size = 512;
+static const size_t local_size = 32;
 
 static void opencl_kernels_init(const uint verbose) {
   // Build OpenCL kernels.
   bp5_debug(verbose, "opencl_kernels_init: compile kernels ...\n");
 
-  size_t size =
-      strlen(header_src) + strlen(stream_knl_src) + strlen(ax_knl_src);
-  char *knl_src = bp5_calloc(char, size + 1);
+  size_t size1 = strlen(header_src);
+  size_t size2 = size1 + strlen(stream_knl_src);
+  size_t size3 = size2 + strlen(gs_knl_src);
+  size_t size4 = size3 + strlen(ax_knl_src);
+
+  char *knl_src = bp5_calloc(char, size4 + 1);
   strcpy(knl_src, header_src);
-  strcpy(knl_src + strlen(header_src), stream_knl_src);
-  strcpy(knl_src + strlen(header_src) + strlen(stream_knl_src), ax_knl_src);
+  strcpy(knl_src + size1, stream_knl_src);
+  strcpy(knl_src + size2, gs_knl_src);
+  strcpy(knl_src + size3, ax_knl_src);
 
   cl_int err;
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
@@ -374,7 +431,7 @@ static void opencl_kernels_init(const uint verbose) {
   check(err, "clCreateKernel(add2s2)");
   ax_kernel = clCreateKernel(ocl_program, "ax_kernel_v00", &err);
   check(err, "clCreateKernel(ax)");
-  gs_kernel = clCreateKernel(ocl_program, "gs", &err);
+  gs_kernel = clCreateKernel(ocl_program, "gs_v00", &err);
   check(err, "clCreateKernel(gs)");
 
   bp5_debug(verbose, "opencl_kernels_init: done.\n");
