@@ -457,6 +457,7 @@ static void zero(cl_mem *mem, const uint n) {
   check(clEnqueueNDRangeKernel(ocl_queue, zero_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(zero)");
+  check(clFinish(ocl_queue), "clFinish(zero)");
 }
 
 static scalar glsc3(cl_mem *a, cl_mem *b, cl_mem *c, const uint n) {
@@ -502,6 +503,7 @@ static void copy(cl_mem *a, cl_mem *b, const uint n) {
   check(clEnqueueNDRangeKernel(ocl_queue, copy_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(copy)");
+  check(clFinish(ocl_queue), "clFinish(copy)");
 }
 
 static void add2s1(cl_mem *a, cl_mem *b, const scalar c, const uint n) {
@@ -518,6 +520,7 @@ static void add2s1(cl_mem *a, cl_mem *b, const scalar c, const uint n) {
   check(clEnqueueNDRangeKernel(ocl_queue, add2s1_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(add2s1)");
+  check(clFinish(ocl_queue), "clFinish(add2s1)");
 }
 
 static void add2s2(cl_mem *a, cl_mem *b, const scalar c, const uint n) {
@@ -534,6 +537,7 @@ static void add2s2(cl_mem *a, cl_mem *b, const scalar c, const uint n) {
   check(clEnqueueNDRangeKernel(ocl_queue, add2s2_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(add2s2)");
+  check(clFinish(ocl_queue), "clFinish(add2s2)");
 }
 
 static void ax(cl_mem *w, cl_mem *p, cl_mem *g, cl_mem *D, const uint nelt,
@@ -557,6 +561,7 @@ static void ax(cl_mem *w, cl_mem *p, cl_mem *g, cl_mem *D, const uint nelt,
   check(clEnqueueNDRangeKernel(ocl_queue, ax_kernel, 3, NULL, global_work,
                                local_work, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(ax)");
+  check(clFinish(ocl_queue), "clFinish(ax)");
 }
 
 static void gs(cl_mem *x, const cl_mem *gs_off, const cl_mem *gs_idx,
@@ -575,6 +580,7 @@ static void gs(cl_mem *x, const cl_mem *gs_off, const cl_mem *gs_idx,
   check(clEnqueueNDRangeKernel(ocl_queue, gs_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
         "clEnqueueNDRangeKernel(gs)");
+  check(clFinish(ocl_queue), "clFinish(gs)");
 }
 
 static void opencl_init(const struct bp5_t *bp5) {
