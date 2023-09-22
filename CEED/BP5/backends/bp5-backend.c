@@ -30,7 +30,6 @@ void bp5_register_backend(const char *name,
   }
 
   backends[backends_count++] = backend;
-  bp5_debug(1, "bp5_register_backend: %s\n", backend->name);
 }
 
 void bp5_register_backends(int verbose) {
@@ -40,6 +39,8 @@ void bp5_register_backends(int verbose) {
 #undef BP5_BACKEND
   bp5_debug(verbose, "bp5_register_backends: backends_count=%d done.\n",
             backends_count);
+  for (unsigned i = 0; i < backends_count; i++)
+    bp5_debug(verbose, "\tbackend %02d: %s\n", i, backends[i]->name);
 }
 
 void bp5_init_backend(const struct bp5_t *bp5) {
