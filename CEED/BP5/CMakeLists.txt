@@ -20,7 +20,7 @@ set(BP5_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/backends/)
 configure_file(${CMAKE_SOURCE_DIR}/include/bp5-defs.h.in
   ${CMAKE_SOURCE_DIR}/include/bp5-defs.h @ONLY)
 
-set(SOURCES src/bp5-impl.c src/bp5-setup.c backends/bp5-backend.c
+set(SOURCES src/bp5-impl.c src/bp5-setup.c src/bp5-backend.c
   backends/bp5-backend-dummy.c)
 
 if (ENABLE_OPENCL)

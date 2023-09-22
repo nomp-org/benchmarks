@@ -326,8 +326,6 @@ static cl_kernel glsc3_kernel, add2s1_kernel, add2s2_kernel;
 static cl_kernel ax_kernel, gs_kernel;
 static const size_t local_size = 512;
 
-static void print_program_build_log() {}
-
 static void opencl_kernels_init(const uint verbose) {
   // Build OpenCL kernels.
   bp5_debug(verbose, "opencl_kernels_init: compile kernels ...\n");
