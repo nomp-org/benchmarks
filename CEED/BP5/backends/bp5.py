@@ -17,7 +17,5 @@ def gs(knl, context):
     i, j, k = sorted(knl.default_entrypoint.all_inames())
     i_inner, i_outer = f"{i}_inner", f"{i}_outer"
     knl = lp.split_iname(knl, i, 32, inner_iname=i_inner, outer_iname=i_outer)
-    knl = lp.tag_inames(
-        knl, {i_outer: "g.0", i_inner: "l.0", j: "unr", k: "unr"}
-    )
+    knl = lp.tag_inames(knl, {i_outer: "g.0", i_inner: "l.0"})
     return knl

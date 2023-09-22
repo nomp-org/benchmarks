@@ -557,7 +557,8 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
   mask(&r_mem, n);
 
   // Run CG on the device.
-  scalar rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n)), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n));
+  scalar r0 = rnorm;
   for (uint i = 0; i < bp5->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(&z_mem, &r_mem, n);

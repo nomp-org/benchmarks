@@ -6,7 +6,7 @@ static scalar *r, *x, *z, *p, *w;
 static const scalar *c, *g, *D;
 static const uint *gs_off, *gs_idx;
 static scalar *wrk;
-static uint dofs, nx1, edofs;
+static uint dofs, nx1, edofs, gs_n;
 
 static void mem_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "mem_init: copy problem data to device ...\n");
@@ -26,9 +26,12 @@ static void mem_init(const struct bp5_t *bp5) {
   // There is no need to allcoate following arrays on host. We just copy them
   // into the device.
   c = bp5->c, g = bp5->g, D = bp5->D;
-  gs_off = bp5->gs_off, gs_idx = bp5->gs_idx;
   nx1 = bp5->nx1;
 #pragma nomp update(to : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
+
+  gs_n = bp5->gs_n;
+  gs_off = bp5->gs_off, gs_idx = bp5->gs_idx;
+#pragma nomp update(to : gs_off[0, gs_n + 1], gs_idx[0, gs_off[gs_n]])
 
   // Work array on device and host.
   edofs = bp5_get_elem_dofs(bp5);
@@ -41,7 +44,7 @@ static void mem_init(const struct bp5_t *bp5) {
 static void _nomp_init(const struct bp5_t *bp5) {
   if (initialized)
     return;
-  bp5_debug(bp5->verbose, "_nomp_init: initializing nomp backend ...\n");
+  bp5_debug(bp5->verbose, "nomp_init: initializing nomp backend ...\n");
 
   const int argc = 10;
   char *argv[] = {"--nomp-device",      "0",
@@ -55,7 +58,7 @@ static void _nomp_init(const struct bp5_t *bp5) {
   mem_init(bp5);
 
   initialized = 1;
-  bp5_debug(bp5->verbose, "_nomp_init: done.\n");
+  bp5_debug(bp5->verbose, "nomp_init: done.\n");
 }
 
 inline static void zero(scalar *v, const uint n) {
@@ -186,10 +189,10 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
 
 static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   if (!initialized)
-    bp5_error("_nomp_run: nomp backend is not initialized.\n");
+    bp5_error("nomp_run: nomp backend is not initialized.\n");
 
   const uint n = bp5_get_local_dofs(bp5);
-  bp5_debug(bp5->verbose, "_nomp_run: ... n=%u\n", n);
+  bp5_debug(bp5->verbose, "nomp_run: ... n=%u\n", n);
 
   clock_t t0 = clock();
 
@@ -211,7 +214,6 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   scalar rnorm = sqrt(glsc3(r, c, r, n));
   scalar r0 = rnorm;
   for (uint i = 0; i < 1; ++i) {
-    // Preconditioner (which is just a copy for now).
     copy(z, r, n);
 
     rtz2 = rtz1;
@@ -222,8 +224,12 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    // ax(w, p, g, D, bp5->nelt, nx1);
-    gs(w, gs_off, gs_idx, bp5->gs_n);
+#if 0
+    ax(w, p, g, D, bp5->nelt, nx1);
+#else
+    copy(w, p, n);
+#endif
+    // gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
 
@@ -235,15 +241,15 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "_nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
+    bp5_debug(bp5->verbose, "nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
   }
 
 #pragma nomp sync
   clock_t t1 = clock();
 
-  bp5_debug(bp5->verbose, "_nomp_run: done.\n");
-  bp5_debug(bp5->verbose, "_nomp_run: iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "_nomp_run: residual = %e %e.\n", r0, rnorm);
+  bp5_debug(bp5->verbose, "nomp_run: done.\n");
+  bp5_debug(bp5->verbose, "nomp_run: iterations = %d.\n", bp5->max_iter);
+  bp5_debug(bp5->verbose, "nomp_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }
