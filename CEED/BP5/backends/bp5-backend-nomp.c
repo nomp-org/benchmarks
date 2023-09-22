@@ -120,11 +120,14 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const uint nelt, const uint nx1) {
-  scalar *ur = wrk;
-  scalar *us = ur + nx1 * nx1 * nx1;
-  scalar *ut = us + nx1 * nx1 * nx1;
+  // FIXME: This doesn't work with nompcc: initializers are not handled
+  // correctly.
+  scalar *ur, *us, *ut;
+  ur = wrk;
+  us = ur + nx1 * nx1 * nx1;
+  ut = us + nx1 * nx1 * nx1;
 
-#pragma nomp for
+#pragma nomp for transform("bp5", "ax")
   for (uint e = 0; e < nelt; e++) {
     const uint ebase = e * nx1 * nx1 * nx1;
     for (uint k = 0; k < nx1; k++) {
@@ -145,42 +148,42 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
       }
     }
 
-    for (uint k = 0; k < nx1; k++) {
-      for (uint j = 0; j < nx1; j++) {
-        for (uint i = 0; i < nx1; i++) {
-          const uint gbase = 6 * (ebase + BP5_IDX3(i, j, k));
+    for (uint k1 = 0; k1 < nx1; k1++) {
+      for (uint j1 = 0; j1 < nx1; j1++) {
+        for (uint i1 = 0; i1 < nx1; i1++) {
+          const uint gbase = 6 * (ebase + BP5_IDX3(i1, j1, k1));
           scalar r_G00 = G[gbase + 0];
           scalar r_G01 = G[gbase + 1];
           scalar r_G02 = G[gbase + 2];
           scalar r_G11 = G[gbase + 3];
           scalar r_G12 = G[gbase + 4];
           scalar r_G22 = G[gbase + 5];
-          scalar wr = r_G00 * ur[BP5_IDX3(i, j, k)] +
-                      r_G01 * us[BP5_IDX3(i, j, k)] +
-                      r_G02 * ut[BP5_IDX3(i, j, k)];
-          scalar ws = r_G01 * ur[BP5_IDX3(i, j, k)] +
-                      r_G11 * us[BP5_IDX3(i, j, k)] +
-                      r_G12 * ut[BP5_IDX3(i, j, k)];
-          scalar wt = r_G02 * ur[BP5_IDX3(i, j, k)] +
-                      r_G12 * us[BP5_IDX3(i, j, k)] +
-                      r_G22 * ut[BP5_IDX3(i, j, k)];
-          ur[BP5_IDX3(i, j, k)] = wr;
-          us[BP5_IDX3(i, j, k)] = ws;
-          ut[BP5_IDX3(i, j, k)] = wt;
+          scalar wr = r_G00 * ur[BP5_IDX3(i1, j1, k1)] +
+                      r_G01 * us[BP5_IDX3(i1, j1, k1)] +
+                      r_G02 * ut[BP5_IDX3(i1, j1, k1)];
+          scalar ws = r_G01 * ur[BP5_IDX3(i1, j1, k1)] +
+                      r_G11 * us[BP5_IDX3(i1, j1, k1)] +
+                      r_G12 * ut[BP5_IDX3(i1, j1, k1)];
+          scalar wt = r_G02 * ur[BP5_IDX3(i1, j1, k1)] +
+                      r_G12 * us[BP5_IDX3(i1, j1, k1)] +
+                      r_G22 * ut[BP5_IDX3(i1, j1, k1)];
+          ur[BP5_IDX3(i1, j1, k1)] = wr;
+          us[BP5_IDX3(i1, j1, k1)] = ws;
+          ut[BP5_IDX3(i1, j1, k1)] = wt;
         }
       }
     }
 
-    for (uint k = 0; k < nx1; k++) {
-      for (uint j = 0; j < nx1; j++) {
-        for (uint i = 0; i < nx1; i++) {
+    for (uint k2 = 0; k2 < nx1; k2++) {
+      for (uint j2 = 0; j2 < nx1; j2++) {
+        for (uint i2 = 0; i2 < nx1; i2++) {
           scalar wo = 0;
-          for (uint l = 0; l < nx1; l++) {
-            wo += D[BP5_IDX2(i, l)] * ur[BP5_IDX3(l, j, k)] +
-                  D[BP5_IDX2(j, l)] * us[BP5_IDX3(i, l, k)] +
-                  D[BP5_IDX2(k, l)] * ut[BP5_IDX3(i, j, l)];
+          for (uint l1 = 0; l1 < nx1; l1++) {
+            wo += D[BP5_IDX2(i2, l1)] * ur[BP5_IDX3(l1, j2, k2)] +
+                  D[BP5_IDX2(j2, l1)] * us[BP5_IDX3(i2, l1, k2)] +
+                  D[BP5_IDX2(k2, l1)] * ut[BP5_IDX3(i2, j2, l1)];
           }
-          w[ebase + BP5_IDX3(i, j, k)] = wo;
+          w[ebase + BP5_IDX3(i2, j2, k2)] = wo;
         }
       }
     }
@@ -224,12 +227,8 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-#if 0
     ax(w, p, g, D, bp5->nelt, nx1);
-#else
-    copy(w, p, n);
-#endif
-    // gs(w, gs_off, gs_idx, gs_n);
+    gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
 

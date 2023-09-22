@@ -19,3 +19,9 @@ def gs(knl, context):
     knl = lp.split_iname(knl, i, 32, inner_iname=i_inner, outer_iname=i_outer)
     knl = lp.tag_inames(knl, {i_outer: "g.0", i_inner: "l.0"})
     return knl
+
+
+def ax(knl, context):
+    inames = sorted(knl.default_entrypoint.all_inames())
+    print(knl)
+    return knl
