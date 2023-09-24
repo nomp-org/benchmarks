@@ -8,7 +8,6 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${CMAKE_INSTALL_PREFIX}/lib64")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
 
-set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 option(ENABLE_OPENCL "Build OPENCL backend" OFF)
@@ -43,14 +42,19 @@ if (ENABLE_CUDA)
   endif()
 endif()
 
-if (ENABLE_HIP)
-  find_package(HIP REQUIRED)
-  list(APPEND SOURCES backends/bp5-backend-hip.c)
-endif()
-
 if (ENABLE_NOMP)
   list(APPEND SOURCES backends/bp5-backend-nomp.c)
 endif()
+
+set_source_files_properties(${SOURCE} PROPERTIES C_STANDARD 11)
+set_source_files_properties(${SOURCE} PROPERTIES C_STANDARD_REQUIRED ON)
+
+if (ENABLE_HIP)
+  set_source_files_properties(backends/bp5-backend-hip.c
+    PROPERTIES COMPILE_FLAGS "-x hip")
+  list(APPEND SOURCES backends/bp5-backend-hip.c)
+endif()
+
 
 add_library(bp5 SHARED ${SOURCES})
 set_target_properties(bp5 PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
@@ -69,9 +73,6 @@ if (ENABLE_OPENCL)
 endif()
 if (ENABLE_CUDA)
   target_link_libraries(bp5 PRIVATE CUDA::cudart CUDA::nvrtc)
-endif()
-if (ENABLE_HIP)
-  target_link_libraries(bp5 PRIVATE bp5::HIP)
 endif()
 
 add_executable(bp5-driver bin/bp5-driver.c)

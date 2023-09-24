@@ -4,6 +4,7 @@
 #include "bp5-backend.h"
 
 static uint initialized = 0;
+static const size_t local_size = 512;
 static const char *ERR_STR_HIP_FAILURE = "%s:%d HIP %s failure: %s.\n";
 
 #define check_error(FNAME, LINE, CALL, ERR_T, SUCCES, GET_ERR, OP)             \
@@ -66,4 +67,15 @@ static void hip_mem_init(const struct bp5_t *bp5) {
   check_driver(hipMalloc((void **)&d_wrk, n * sizeof(scalar)));
 
   bp5_debug(bp5->verbose, "done.\n");
+}
+
+__global__ static void mask_kernel(scalar *v) {
+  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i == 0)
+    v[i] = 0;
+}
+
+inline static void mask(scalar *d_v, const uint n) {
+  const size_t global_size = (n + local_size - 1) / local_size;
+  mask_kernel<<<global_size, local_size>>>(d_v);
 }
