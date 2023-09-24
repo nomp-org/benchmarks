@@ -179,8 +179,7 @@ inline static void gs(scalar *d_v, const uint *d_gs_off, const uint *d_gs_idx,
 }
 
 __global__ static void ax_kernel_v00(scalar *w, const scalar *u,
-                                     const scalar *G, const scalar *D,
-                                     const uint nelt, const uint nx1) {
+                                     const scalar *G, const scalar *D, const uint nx1) {
   const uint ebase = blockIdx.x * nx1 * nx1 * nx1;
   const uint i = threadIdx.x;
   const uint j = threadIdx.y;
@@ -244,8 +243,7 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
   dim3 local_dim(nx1, nx1, nx1);
   dim3 global_dim(nelt);
   const size_t shared_size = (3 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
-  ax_kernel_v00<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D,
-                                                        nelt, nx1);
+  ax_kernel_v00<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D, nx1);
 }
 
 static void cuda_init(const struct bp5_t *bp5) {
@@ -271,7 +269,7 @@ static void cuda_init(const struct bp5_t *bp5) {
 
 static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
   if (!initialized)
-    bp5_error("cuda_run: CUDA backend is not initialized.\n");
+    bp5_error("cuda_run: cuda backend is not initialized.\n");
 
   const uint n = bp5_get_local_dofs(bp5);
   bp5_debug(bp5->verbose, "cuda_run: ... n=%u\n", n);
