@@ -251,7 +251,7 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
 static void cuda_init(const struct bp5_t *bp5) {
   if (initialized)
     return;
-  bp5_debug(bp5->verbose, "cuda_init: initializing Cuda backend ...\n");
+  bp5_debug(bp5->verbose, "cuda_init: initializing cuda backend ...\n");
 
   int num_devices = 0;
   check_driver(cudaGetDeviceCount(&num_devices));
