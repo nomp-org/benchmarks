@@ -5,17 +5,6 @@ struct dof_t {
   uint idx;
 };
 
-uint bp5_get_elem_dofs(const struct bp5_t *bp5) {
-  const uint nx1 = bp5->nx1;
-  return nx1 * nx1 * nx1;
-}
-
-uint bp5_get_local_dofs(const struct bp5_t *bp5) {
-  uint ndof = bp5->nelt;
-  ndof *= bp5_get_elem_dofs(bp5);
-  return ndof;
-}
-
 static int cmp_dof_t(const void *a, const void *b) {
   const struct dof_t *pa = (const struct dof_t *)a;
   const struct dof_t *pb = (const struct dof_t *)b;
@@ -40,6 +29,17 @@ static uint log_2(const uint x) {
     l++;
   bp5_assert((1 << l) == (int)x, "x must be a power of 2.");
   return l;
+}
+
+uint bp5_get_elem_dofs(const struct bp5_t *bp5) {
+  const uint nx1 = bp5->nx1;
+  return nx1 * nx1 * nx1;
+}
+
+uint bp5_get_local_dofs(const struct bp5_t *bp5) {
+  uint ndof = bp5->nelt;
+  ndof *= bp5_get_elem_dofs(bp5);
+  return ndof;
 }
 
 void bp5_gs_setup(struct bp5_t *bp5) {
@@ -144,6 +144,20 @@ void bp5_gs_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_gs_setup: done.\n");
 }
 
+void bp5_gs(scalar *c, const struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_gs: ...\n");
+
+  for (uint i = 0; i < bp5->gs_n; i++) {
+    scalar sum = 0;
+    for (uint j = bp5->gs_off[i]; j < bp5->gs_off[i + 1]; j++)
+      sum += c[bp5->gs_idx[j]];
+    for (uint j = bp5->gs_off[i]; j < bp5->gs_off[i + 1]; j++)
+      c[bp5->gs_idx[j]] = sum;
+  }
+
+  bp5_debug(bp5->verbose, "bp5_gs: done.\n");
+}
+
 void bp5_read_zwgll(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_read_zwgll: ...\n");
 
@@ -241,16 +255,6 @@ void bp5_derivative_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_derivative_setup: done.\n");
 }
 
-void bp5_gs(scalar *c, const struct bp5_t *bp5) {
-  for (uint i = 0; i < bp5->gs_n; i++) {
-    scalar sum = 0;
-    for (uint j = bp5->gs_off[i]; j < bp5->gs_off[i + 1]; j++)
-      sum += c[bp5->gs_idx[j]];
-    for (uint j = bp5->gs_off[i]; j < bp5->gs_off[i + 1]; j++)
-      c[bp5->gs_idx[j]] = sum;
-  }
-}
-
 void bp5_inverse_multiplicity_setup(struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "bp5_inverse_multiplicity_setup: ...\n");
 
@@ -268,7 +272,11 @@ void bp5_inverse_multiplicity_setup(struct bp5_t *bp5) {
 }
 
 void bp5_inverse_multiplicity(scalar *x, const struct bp5_t *bp5) {
+  bp5_debug(bp5->verbose, "bp5_inverse_multiplicity: ...\n");
+
   uint ndof = bp5_get_local_dofs(bp5);
   for (uint i = 0; i < ndof; i++)
     x[i] = x[i] * bp5->c[i];
+
+  bp5_debug(bp5->verbose, "bp5_inverse_multiplicity: done.\n");
 }
