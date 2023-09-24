@@ -253,9 +253,9 @@ static void cuda_init(const struct bp5_t *bp5) {
 
   int num_devices = 0;
   check_driver(cudaGetDeviceCount(&num_devices));
-  if (bp5->device_id >= (uint)num_devices) {
+  if (bp5->device >= (uint)num_devices) {
     bp5_error("cuda_init: Invalid device id %d, only %d devices available.",
-              bp5->device_id, num_devices);
+              bp5->device, num_devices);
   }
 
   check_driver(cudaSetDeviceFlags(cudaDeviceMapHost));

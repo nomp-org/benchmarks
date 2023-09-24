@@ -39,8 +39,10 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       {0, 0, 0, 0}};
 
   // Default values for optional arguments.
-  bp5->verbose = 1, bp5->device_id = 0, bp5->platform_id = 0;
-  bp5->max_iter = 100;
+  bp5->verbose = BP5_VERBOSE;
+  bp5->device = BP5_DEVICE;
+  bp5->platform = BP5_PLATFORM;
+  bp5->max_iter = BP5_MAX_ITER;
 
   // Set invalid values for required arguments so we can check if they were
   // initialized later.
@@ -58,10 +60,10 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
       bp5->verbose = atoi(optarg);
       break;
     case 12:
-      bp5->device_id = atoi(optarg);
+      bp5->device = atoi(optarg);
       break;
     case 14:
-      bp5->platform_id = atoi(optarg);
+      bp5->platform = atoi(optarg);
       break;
     case 16:
       set_backend(bp5, optarg);
@@ -95,8 +97,8 @@ static void bp5_parse_opts(struct bp5_t *bp5, int *argc, char ***argv_) {
     bp5_error("bp5_parse_opts: --bp5-backend is not provided or invalid.\n");
 
   bp5_debug(bp5->verbose, "bp5_parse_opts: verbose=%d\n", bp5->verbose);
-  bp5_debug(bp5->verbose, "bp5_parse_opts: device_id=%d\n", bp5->device_id);
-  bp5_debug(bp5->verbose, "bp5_parse_opts: platform_id=%d\n", bp5->platform_id);
+  bp5_debug(bp5->verbose, "bp5_parse_opts: device=%d\n", bp5->device);
+  bp5_debug(bp5->verbose, "bp5_parse_opts: platform=%d\n", bp5->platform);
   bp5_debug(bp5->verbose, "bp5_parse_opts: backend=%s\n", bp5->backend);
   bp5_debug(bp5->verbose, "bp5_parse_opts: nelems=%d\n", bp5->nelt);
   bp5_debug(bp5->verbose, "bp5_parse_opts: order=%d\n", bp5->nx1 - 1);

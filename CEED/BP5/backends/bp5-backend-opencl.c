@@ -253,13 +253,13 @@ static void opencl_device_init(const struct bp5_t *bp5) {
   bp5_debug(bp5->verbose, "opencl_init: initialize platform ...\n");
   cl_uint num_platforms = 0;
   check(clGetPlatformIDs(0, NULL, &num_platforms), "clGetPlatformIDs");
-  if (bp5->platform_id < 0 | bp5->platform_id >= num_platforms)
-    bp5_error("opencl_init: platform id is invalid: %d", bp5->platform_id);
+  if (bp5->platform < 0 | bp5->platform >= num_platforms)
+    bp5_error("opencl_init: platform id is invalid: %d", bp5->platform);
 
   cl_platform_id *cl_platforms = bp5_calloc(cl_platform_id, num_platforms);
   check(clGetPlatformIDs(num_platforms, cl_platforms, &num_platforms),
         "clGetPlatformIDs");
-  cl_platform_id platform = cl_platforms[bp5->platform_id];
+  cl_platform_id platform = cl_platforms[bp5->platform];
   bp5_free(&cl_platforms);
 
   // Setup OpenCL device.
@@ -267,14 +267,14 @@ static void opencl_device_init(const struct bp5_t *bp5) {
   cl_uint num_devices = 0;
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices),
         "clGetDeviceIDs");
-  if (bp5->device_id >= num_devices)
-    bp5_error("opencl_init: device id is invalid: %d", bp5->device_id);
+  if (bp5->device >= num_devices)
+    bp5_error("opencl_init: device id is invalid: %d", bp5->device);
 
   cl_device_id *cl_devices = bp5_calloc(cl_device_id, num_devices);
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, num_devices, cl_devices,
                        &num_devices),
         "clGetDeviceIDs");
-  ocl_device = cl_devices[bp5->device_id];
+  ocl_device = cl_devices[bp5->device];
   bp5_free(&cl_devices);
 
   // Setup OpenCL context and queue.
