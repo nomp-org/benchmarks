@@ -1,7 +1,6 @@
 #include "bp5-backend.h"
 
 static uint initialized = 0;
-
 static const char *ERR_STR_CUDA_FAILURE = "%s:%d CUDA %s failure: %s.\n";
 
 #define check_error(FNAME, LINE, CALL, ERR_T, SUCCES, GET_ERR, OP)             \
