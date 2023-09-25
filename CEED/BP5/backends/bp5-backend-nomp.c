@@ -47,16 +47,16 @@ static void _nomp_init(const struct bp5_t *bp5) {
     return;
   bp5_debug(bp5->verbose, "nomp_init: initializing nomp backend ...\n");
 
-  char verbose[BUFSIZ], device[BUFSIZ], paltform[BUFSIZ];
+  char verbose[BUFSIZ], device[BUFSIZ], platform[BUFSIZ];
   snprintf(verbose, BUFSIZ, "%u", bp5->verbose);
   snprintf(device, BUFSIZ, "%u", bp5->device);
   snprintf(platform, BUFSIZ, "%u", bp5->platform);
 
   const int argc = 10;
-  char *argv[] = {"--nomp-device",   device,           "--nomp-backend",
-                  "opencl",          "--nomp-verbose", verbose,
-                  "--nomp-platform", platform,         "--nomp-scripts-dir",
-                  BP5_SCRIPTS_DIR};
+  char *argv[] = {
+      "--nomp-device",      device,         "--nomp-backend",  "hip",
+      "--nomp-verbose",     verbose,        "--nomp-platform", platform,
+      "--nomp-scripts-dir", BP5_SCRIPTS_DIR};
 
 #pragma nomp init(argc, argv)
 

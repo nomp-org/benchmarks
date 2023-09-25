@@ -21,7 +21,7 @@ set(BP5_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/backends/)
 set(BP5_VERBOSE 1)
 set(BP5_DEVICE 0)
 set(BP5_PLATFORM 0)
-set(BP5_MAX_ITER 50)
+set(BP5_MAX_ITER 100)
 
 configure_file(${CMAKE_SOURCE_DIR}/include/bp5-defs.h.in
   ${CMAKE_SOURCE_DIR}/include/bp5-defs.h @ONLY)
