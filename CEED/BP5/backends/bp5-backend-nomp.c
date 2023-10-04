@@ -123,30 +123,23 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 }
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
-                      const scalar *D, const uint nelt, const uint nx1) {
-  // FIXME: This doesn't work with nompcc: initializers are not handled
-  // correctly.
-  scalar *ur, *us, *ut;
-  ur = wrk;
-  us = ur + nx1 * nx1 * nx1;
-  ut = us + nx1 * nx1 * nx1;
-
+                      const scalar *D, const uint nelt, const uint nx1,
+                      scalar *ur, scalar *us, scalar *ut) {
 #pragma nomp for transform("bp5", "ax")
   for (uint e = 0; e < nelt; e++) {
-    const uint ebase = e * nx1 * nx1 * nx1;
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
-          ur[BP5_IDX3(i, j, k)] = 0;
-          us[BP5_IDX3(i, j, k)] = 0;
-          ut[BP5_IDX3(i, j, k)] = 0;
+          ur[BP5_IDX4(i, j, k, e)] = 0;
+          us[BP5_IDX4(i, j, k, e)] = 0;
+          ut[BP5_IDX4(i, j, k, e)] = 0;
           for (uint l = 0; l < nx1; l++) {
-            ur[BP5_IDX3(i, j, k)] +=
-                D[BP5_IDX2(l, i)] * u[ebase + BP5_IDX3(l, j, k)];
-            us[BP5_IDX3(i, j, k)] +=
-                D[BP5_IDX2(l, j)] * u[ebase + BP5_IDX3(i, l, k)];
-            ut[BP5_IDX3(i, j, k)] +=
-                D[BP5_IDX2(l, k)] * u[ebase + BP5_IDX3(i, j, l)];
+            ur[BP5_IDX4(i, j, k, e)] +=
+                D[BP5_IDX2(l, i)] * u[BP5_IDX4(l, j, k, e)];
+            us[BP5_IDX4(i, j, k, e)] +=
+                D[BP5_IDX2(l, j)] * u[BP5_IDX4(i, l, k, e)];
+            ut[BP5_IDX4(i, j, k, e)] +=
+                D[BP5_IDX2(l, k)] * u[BP5_IDX4(i, j, l, e)];
           }
         }
       }
@@ -155,25 +148,25 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
     for (uint k1 = 0; k1 < nx1; k1++) {
       for (uint j1 = 0; j1 < nx1; j1++) {
         for (uint i1 = 0; i1 < nx1; i1++) {
-          const uint gbase = 6 * (ebase + BP5_IDX3(i1, j1, k1));
+          const uint gbase = 6 * BP5_IDX4(i1, j1, k1, e);
           scalar r_G00 = G[gbase + 0];
           scalar r_G01 = G[gbase + 1];
           scalar r_G02 = G[gbase + 2];
           scalar r_G11 = G[gbase + 3];
           scalar r_G12 = G[gbase + 4];
           scalar r_G22 = G[gbase + 5];
-          scalar wr = r_G00 * ur[BP5_IDX3(i1, j1, k1)] +
-                      r_G01 * us[BP5_IDX3(i1, j1, k1)] +
-                      r_G02 * ut[BP5_IDX3(i1, j1, k1)];
-          scalar ws = r_G01 * ur[BP5_IDX3(i1, j1, k1)] +
-                      r_G11 * us[BP5_IDX3(i1, j1, k1)] +
-                      r_G12 * ut[BP5_IDX3(i1, j1, k1)];
-          scalar wt = r_G02 * ur[BP5_IDX3(i1, j1, k1)] +
-                      r_G12 * us[BP5_IDX3(i1, j1, k1)] +
-                      r_G22 * ut[BP5_IDX3(i1, j1, k1)];
-          ur[BP5_IDX3(i1, j1, k1)] = wr;
-          us[BP5_IDX3(i1, j1, k1)] = ws;
-          ut[BP5_IDX3(i1, j1, k1)] = wt;
+          scalar wr = r_G00 * ur[BP5_IDX4(i1, j1, k1, e)] +
+                      r_G01 * us[BP5_IDX4(i1, j1, k1, e)] +
+                      r_G02 * ut[BP5_IDX4(i1, j1, k1, e)];
+          scalar ws = r_G01 * ur[BP5_IDX4(i1, j1, k1, e)] +
+                      r_G11 * us[BP5_IDX4(i1, j1, k1, e)] +
+                      r_G12 * ut[BP5_IDX4(i1, j1, k1, e)];
+          scalar wt = r_G02 * ur[BP5_IDX4(i1, j1, k1, e)] +
+                      r_G12 * us[BP5_IDX4(i1, j1, k1, e)] +
+                      r_G22 * ut[BP5_IDX4(i1, j1, k1, e)];
+          ur[BP5_IDX4(i1, j1, k1, e)] = wr;
+          us[BP5_IDX4(i1, j1, k1, e)] = ws;
+          ut[BP5_IDX4(i1, j1, k1, e)] = wt;
         }
       }
     }
@@ -183,11 +176,11 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
         for (uint i2 = 0; i2 < nx1; i2++) {
           scalar wo = 0;
           for (uint l1 = 0; l1 < nx1; l1++) {
-            wo += D[BP5_IDX2(i2, l1)] * ur[BP5_IDX3(l1, j2, k2)] +
-                  D[BP5_IDX2(j2, l1)] * us[BP5_IDX3(i2, l1, k2)] +
-                  D[BP5_IDX2(k2, l1)] * ut[BP5_IDX3(i2, j2, l1)];
+            wo += D[BP5_IDX2(i2, l1)] * ur[BP5_IDX4(l1, j2, k2, e)] +
+                  D[BP5_IDX2(j2, l1)] * us[BP5_IDX4(i2, l1, k2, e)] +
+                  D[BP5_IDX2(k2, l1)] * ut[BP5_IDX4(i2, j2, l1, e)];
           }
-          w[ebase + BP5_IDX3(i2, j2, k2)] = wo;
+          w[BP5_IDX4(i2, j2, k2, e)] = wo;
         }
       }
     }

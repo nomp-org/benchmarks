@@ -14,7 +14,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 option(ENABLE_OPENCL "Build OPENCL backend" OFF)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
 option(ENABLE_HIP "Build HIP backend" OFF)
-option(ENABLE_NOMP "Build NOMP backend" OFF)
 
 # Build defaults:
 set(BP5_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/backends/)
@@ -27,7 +26,7 @@ configure_file(${CMAKE_SOURCE_DIR}/include/bp5-defs.h.in
   ${CMAKE_SOURCE_DIR}/include/bp5-defs.h @ONLY)
 
 set(SOURCES src/bp5-impl.c src/bp5-setup.c src/bp5-backend.c
-  backends/bp5-backend-dummy.c)
+  backends/bp5-backend-dummy.c backends/bp5-backend-nomp.c)
 
 if (ENABLE_OPENCL)
   find_package(OpenCL REQUIRED)
@@ -46,10 +45,6 @@ if (ENABLE_CUDA)
   else()
     message(FATAL_ERROR "ENABLE_CUDA is ON but unable to find CUDA.")
   endif()
-endif()
-
-if (ENABLE_NOMP)
-  list(APPEND SOURCES backends/bp5-backend-nomp.c)
 endif()
 
 set_source_files_properties(${SOURCE} PROPERTIES C_STANDARD 11)

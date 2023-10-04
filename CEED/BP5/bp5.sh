@@ -17,6 +17,7 @@ function print_help() {
 : ${BP5_BUILD_TYPE:=RelWithDebInfo}
 : ${BP5_BUILD_DIR:=`pwd`/build}
 : ${BP5_INSTALL_PREFIX:=`pwd`/install}
+: ${BP5_LIBRARY_SUFFIX:=".so"}
 : ${BP5_OPENCL:=OFF}
 : ${BP5_CUDA:=OFF}
 : ${BP5_HIP:=OFF}
@@ -113,16 +114,21 @@ if [[ "${BP5_NOMP}" ==  "ON" ]]; then
 fi
 
 ### Don't touch anything that follows this line. ###
-BP5_CMAKE_CMD="-DENABLE_OPENCL=${BP5_OPENCL} -DENABLE_CUDA=${BP5_CUDA}"
-BP5_CMAKE_CMD="${BP5_CMAKE_CMD} -DENABLE_HIP=${BP5_HIP}"
-BP5_CMAKE_CMD="${BP5_CMAKE_CMD} -DENABLE_NOMP=${BP5_NOMP}"
-
 if [[ ! -z "${BP5_CC}" ]]; then
   export CC=${BP5_CC}
 fi
-if [[ ! -z "${BP5_CFLAGS}" ]]; then
-  export CFLAGS=${BP5_CFLAGS}
+
+BP5_CFLAGS="${BP5_CFLAGS} -Wno-unknown-pragmas"
+export CFLAGS="${BP5_CFLAGS}"
+
+BP5_CMAKE_CMD="-DENABLE_OPENCL=${BP5_OPENCL} -DENABLE_CUDA=${BP5_CUDA}"
+BP5_CMAKE_CMD="${BP5_CMAKE_CMD} -DENABLE_HIP=${BP5_HIP}"
+
+if [[ ${BP5_OPENCL} == "ON" ]]; then
+  BP5_CMAKE_CMD="${BP5_CMAKE_CMD} -DOpenCL_INCLUDE_DIR=${CONDA_PREFIX}/include"
+  BP5_CMAKE_CMD="${BP5_CMAKE_CMD} -DOpenCL_LIBRARY=${CONDA_PREFIX}/lib/libOpenCL${BP5_LIBRARY_SUFFIX}"
 fi
+
 if [[ ! -z "${BP5_BUILD_TYPE}" ]]; then
   BP5_CMAKE_CMD="${BP5_CMAKE_CMD} -DCMAKE_BUILD_TYPE=${BP5_BUILD_TYPE}"
 fi
@@ -138,7 +144,5 @@ mkdir -p ${BP5_BUILD_DIR} 2> /dev/null
 
 echo "cmake -S ${BP5_CURRENT_DIR} ${BP5_CMAKE_CMD}"
 cmake -S ${BP5_CURRENT_DIR} ${BP5_CMAKE_CMD}
-#  -DOpenCL_LIBRARY=${CONDA_PREFIX}/lib/libOpenCL.dylib \
-#  -DOpenCL_INCLUDE_DIR=${CONDA_PREFIX}/include
   
 cmake --build ${BP5_BUILD_DIR} --target install -j10
