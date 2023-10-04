@@ -20,9 +20,8 @@ static void mem_init(const struct bp5_t *bp5) {
   z = bp5_calloc(scalar, dofs);
   p = bp5_calloc(scalar, dofs);
   w = bp5_calloc(scalar, dofs);
-#pragma nomp update(alloc                                                      \
-                    : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],          \
-                      w[0, dofs])
+#pragma nomp update(alloc : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],    \
+                        w[0, dofs])
 
   // There is no need to allcoate following arrays on host. We just copy them
   // into the device.
@@ -266,9 +265,8 @@ static void _nomp_finalize(void) {
   if (!initialized)
     return;
 
-#pragma nomp update(free                                                       \
-                    : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],          \
-                      w[0, dofs])
+#pragma nomp update(free : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],     \
+                        w[0, dofs])
   bp5_free(&r);
   bp5_free(&x);
   bp5_free(&z);

@@ -133,7 +133,7 @@ static scalar hip_run(const struct bp5_t *bp5, const scalar *r) {
       beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-#if 1
+#if 0
     ax(d_w, d_p, d_g, d_D, bp5->nelt, bp5->nx1);
 #else
     copy(d_w, d_p, n);
