@@ -117,8 +117,8 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
     scalar s = 0;
     for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
       s += v[gs_idx[j]];
-    for (uint k = gs_off[i]; k < gs_off[i + 1]; k++)
-      v[gs_idx[k]] = s;
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
+      v[gs_idx[j]] = s;
   }
 }
 
