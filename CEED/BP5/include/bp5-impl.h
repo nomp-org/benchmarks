@@ -42,9 +42,6 @@ struct bp5_t {
 // Get the number of local DOFs.
 BP5_INTERN uint bp5_get_local_dofs(const struct bp5_t *bp5);
 
-// Get the number of elements DOFs.
-BP5_INTERN uint bp5_get_elem_dofs(const struct bp5_t *bp5);
-
 // Gather-scatter setup.
 BP5_INTERN void bp5_gs_setup(struct bp5_t *bp5);
 

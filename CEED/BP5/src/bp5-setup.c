@@ -31,14 +31,9 @@ static uint log_2(const uint x) {
   return l;
 }
 
-uint bp5_get_elem_dofs(const struct bp5_t *bp5) {
-  const uint nx1 = bp5->nx1;
-  return nx1 * nx1 * nx1;
-}
-
 uint bp5_get_local_dofs(const struct bp5_t *bp5) {
   uint ndof = bp5->nelt;
-  ndof *= bp5_get_elem_dofs(bp5);
+  ndof *= bp5->nx1 * bp5->nx1 * bp5->nx1;
   return ndof;
 }
 
