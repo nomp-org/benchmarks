@@ -129,11 +129,7 @@ static scalar cuda_run(const struct bp5_t *bp5, const scalar *r) {
       beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-#if  1
     ax(d_w, d_p, d_g, d_D, bp5->nelt, bp5->nx1);
-#else
-    copy(d_w, d_p, n);
-#endif
     gs(d_w, d_gs_off, d_gs_idx, bp5->gs_n);
     add2s2(d_w, d_p, 0.1, n);
     mask(d_w, n);

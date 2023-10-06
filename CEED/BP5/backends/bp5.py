@@ -17,4 +17,7 @@ def gs(knl, context):
 
 
 def ax(knl, context):
+    knl = lp.tag_inames(
+        knl, {"e": "g.0", "i*": "l.0", "j*": "l.1", "k*": "l.2", "l*": "ord"}
+    )
     return knl
