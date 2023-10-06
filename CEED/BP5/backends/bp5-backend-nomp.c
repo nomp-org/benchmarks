@@ -172,7 +172,10 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
         }
       }
     }
+  }
 
+#pragma nomp for transform("bp5", "ax")
+  for (uint e = 0; e < nelt; e++) {
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
