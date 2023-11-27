@@ -7,7 +7,7 @@
 #include <CL/cl.h>
 #endif
 
-#include "bp5-backend.h"
+#include "nekbone-backend.h"
 
 static uint initialized = 0;
 
@@ -15,7 +15,7 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
 
 #define CASE(MSG, VAL, STR)                                                    \
   case VAL:                                                                    \
-    bp5_error(ERR_STR_OPENCL_FAILURE, MSG, VAL, STR);                          \
+    nekbone_error(ERR_STR_OPENCL_FAILURE, MSG, VAL, STR);                      \
     break;
 
 // clang-format off
@@ -54,7 +54,7 @@ static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
       switch (err_) {                                                          \
         FOR_EACH_ERROR(msg)                                                    \
       default:                                                                 \
-        bp5_error(ERR_STR_OPENCL_FAILURE, msg, err_, "UNKNOWN");               \
+        nekbone_error(ERR_STR_OPENCL_FAILURE, msg, err_, "UNKNOWN");           \
         break;                                                                 \
       }                                                                        \
     }                                                                          \
@@ -248,44 +248,45 @@ static cl_device_id ocl_device;
 static cl_command_queue ocl_queue;
 static cl_context ocl_ctx;
 
-static void opencl_device_init(const struct bp5_t *bp5) {
+static void opencl_device_init(const struct nekbone_t *nekbone) {
   // Setup OpenCL platform.
-  bp5_debug(bp5->verbose, "opencl_init: initialize platform ...\n");
+  nekbone_debug(nekbone->verbose, "opencl_init: initialize platform ...\n");
   cl_uint num_platforms = 0;
   check(clGetPlatformIDs(0, NULL, &num_platforms), "clGetPlatformIDs");
-  if (bp5->platform < 0 | bp5->platform >= num_platforms)
-    bp5_error("opencl_init: platform id is invalid: %d", bp5->platform);
+  if (nekbone->platform < 0 | nekbone->platform >= num_platforms)
+    nekbone_error("opencl_init: platform id is invalid: %d", nekbone->platform);
 
-  cl_platform_id *cl_platforms = bp5_calloc(cl_platform_id, num_platforms);
+  cl_platform_id *cl_platforms = nekbone_calloc(cl_platform_id, num_platforms);
   check(clGetPlatformIDs(num_platforms, cl_platforms, &num_platforms),
         "clGetPlatformIDs");
-  cl_platform_id platform = cl_platforms[bp5->platform];
-  bp5_free(&cl_platforms);
+  cl_platform_id platform = cl_platforms[nekbone->platform];
+  nekbone_free(&cl_platforms);
 
   // Setup OpenCL device.
-  bp5_debug(bp5->verbose, "opencl_init: initialize device ...\n");
+  nekbone_debug(nekbone->verbose, "opencl_init: initialize device ...\n");
   cl_uint num_devices = 0;
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices),
         "clGetDeviceIDs");
-  if (bp5->device >= num_devices)
-    bp5_error("opencl_init: device id is invalid: %d", bp5->device);
+  if (nekbone->device >= num_devices)
+    nekbone_error("opencl_init: device id is invalid: %d", nekbone->device);
 
-  cl_device_id *cl_devices = bp5_calloc(cl_device_id, num_devices);
+  cl_device_id *cl_devices = nekbone_calloc(cl_device_id, num_devices);
   check(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, num_devices, cl_devices,
                        &num_devices),
         "clGetDeviceIDs");
-  ocl_device = cl_devices[bp5->device];
-  bp5_free(&cl_devices);
+  ocl_device = cl_devices[nekbone->device];
+  nekbone_free(&cl_devices);
 
   // Setup OpenCL context and queue.
-  bp5_debug(bp5->verbose, "opencl_init: initialize context and queue ...\n");
+  nekbone_debug(nekbone->verbose,
+                "opencl_init: initialize context and queue ...\n");
   cl_int err;
   ocl_ctx = clCreateContext(NULL, 1, &ocl_device, NULL, NULL, &err);
   check(err, "clCreateContext");
   ocl_queue = clCreateCommandQueueWithProperties(ocl_ctx, ocl_device, 0, &err);
   check(err, "clCreateCommandQueueWithProperties");
 
-  bp5_debug(bp5->verbose, "opencl_init: done.\n");
+  nekbone_debug(nekbone->verbose, "opencl_init: done.\n");
 }
 
 // OpenCL device buffers.
@@ -295,10 +296,11 @@ static cl_mem gs_off_mem, gs_idx_mem;
 static cl_mem wrk_mem;
 static scalar *wrk;
 
-static void opencl_mem_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "opencl_mem_init: copy problem data to device ...\n");
+static void opencl_mem_init(const struct nekbone_t *nekbone) {
+  nekbone_debug(nekbone->verbose,
+                "opencl_mem_init: copy problem data to device ...\n");
 
-  const uint n = bp5_get_local_dofs(bp5);
+  const uint n = nekbone_get_local_dofs(nekbone);
 
   // Allocate device buffers and copy problem data to device.
   cl_int err;
@@ -323,7 +325,7 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
       clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY, n * sizeof(scalar), NULL, &err);
   check(err, "clCreateBuffer(c)");
   check(clEnqueueWriteBuffer(ocl_queue, c_mem, CL_TRUE, 0, n * sizeof(scalar),
-                             bp5->c, 0, NULL, NULL),
+                             nekbone->c, 0, NULL, NULL),
         "clEnqueueWriteBuffer(c)");
 
   // Copy geometric factors and derivative matrix.
@@ -331,45 +333,46 @@ static void opencl_mem_init(const struct bp5_t *bp5) {
                          NULL, &err);
   check(err, "clCreateBuffer(g)");
   check(clEnqueueWriteBuffer(ocl_queue, g_mem, CL_TRUE, 0,
-                             6 * n * sizeof(scalar), bp5->g, 0, NULL, NULL),
+                             6 * n * sizeof(scalar), nekbone->g, 0, NULL, NULL),
         "clEnqueueWriteBuffer(g)");
 
-  D_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
-                         bp5->nx1 * bp5->nx1 * sizeof(scalar), NULL, &err);
+  D_mem =
+      clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
+                     nekbone->nx1 * nekbone->nx1 * sizeof(scalar), NULL, &err);
   check(err, "clCreateBuffer(D)");
   check(clEnqueueWriteBuffer(ocl_queue, D_mem, CL_TRUE, 0,
-                             bp5->nx1 * bp5->nx1 * sizeof(scalar), bp5->D, 0,
-                             NULL, NULL),
+                             nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
+                             nekbone->D, 0, NULL, NULL),
         "clEnqueueWriteBuffer(D)");
 
   // Copy gather-scatter offsets and indices.
   gs_off_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
-                              (bp5->gs_n + 1) * sizeof(uint), NULL, &err);
+                              (nekbone->gs_n + 1) * sizeof(uint), NULL, &err);
   check(err, "clCreateBuffer(gs_off)");
   check(clEnqueueWriteBuffer(ocl_queue, gs_off_mem, CL_TRUE, 0,
-                             (bp5->gs_n + 1) * sizeof(uint), bp5->gs_off, 0,
-                             NULL, NULL),
+                             (nekbone->gs_n + 1) * sizeof(uint),
+                             nekbone->gs_off, 0, NULL, NULL),
         "clEnqueueWriteBuffer(gs_off)");
 
   // We add +1 to the actual buffer size in order to avoid
   // CL_INVALID_BUFFER_SIZE in case of there are zero gather-scatter dofs (for
   // example a single element with order = 1).
-  gs_idx_mem =
-      clCreateBuffer(ocl_ctx, CL_MEM_READ_ONLY,
-                     (bp5->gs_off[bp5->gs_n] + 1) * sizeof(uint), NULL, &err);
+  gs_idx_mem = clCreateBuffer(
+      ocl_ctx, CL_MEM_READ_ONLY,
+      (nekbone->gs_off[nekbone->gs_n] + 1) * sizeof(uint), NULL, &err);
   check(err, "clCreateBuffer(gs_idx)");
   check(clEnqueueWriteBuffer(ocl_queue, gs_idx_mem, CL_TRUE, 0,
-                             bp5->gs_off[bp5->gs_n] * sizeof(uint), bp5->gs_idx,
-                             0, NULL, NULL),
+                             nekbone->gs_off[nekbone->gs_n] * sizeof(uint),
+                             nekbone->gs_idx, 0, NULL, NULL),
         "clEnqueueWriteBuffer(gs_idx)");
 
   // Work array.
-  wrk = bp5_calloc(scalar, n);
+  wrk = nekbone_calloc(scalar, n);
   wrk_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
                            &err);
   check(err, "clCreateBuffer(wrk)");
 
-  bp5_debug(bp5->verbose, "opencl_mem_init: done.\n");
+  nekbone_debug(nekbone->verbose, "opencl_mem_init: done.\n");
 }
 
 // OpenCL kernels.
@@ -381,14 +384,14 @@ static const size_t local_size = 32;
 
 static void opencl_kernels_init(const uint verbose) {
   // Build OpenCL kernels.
-  bp5_debug(verbose, "opencl_kernels_init: compile kernels ...\n");
+  nekbone_debug(verbose, "opencl_kernels_init: compile kernels ...\n");
 
   size_t size1 = strlen(header_src);
   size_t size2 = size1 + strlen(stream_knl_src);
   size_t size3 = size2 + strlen(gs_knl_src);
   size_t size4 = size3 + strlen(ax_knl_src);
 
-  char *knl_src = bp5_calloc(char, size4 + 1);
+  char *knl_src = nekbone_calloc(char, size4 + 1);
   strcpy(knl_src, header_src);
   strcpy(knl_src + size1, stream_knl_src);
   strcpy(knl_src + size2, gs_knl_src);
@@ -398,25 +401,25 @@ static void opencl_kernels_init(const uint verbose) {
   ocl_program = clCreateProgramWithSource(ocl_ctx, 1, (const char **)&knl_src,
                                           NULL, &err);
   check(err, "clCreateProgramWithSource");
-  bp5_free(&knl_src);
+  nekbone_free(&knl_src);
 
   err = clBuildProgram(ocl_program, 1, &ocl_device, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
     size_t log_size;
     clGetProgramBuildInfo(ocl_program, ocl_device, CL_PROGRAM_BUILD_LOG, 0,
                           NULL, &log_size);
-    char *log = bp5_calloc(char, log_size);
+    char *log = nekbone_calloc(char, log_size);
     clGetProgramBuildInfo(ocl_program, ocl_device, CL_PROGRAM_BUILD_LOG,
                           log_size, log, NULL);
-    bp5_debug(verbose,
-              "opencl_kernels_init: clBuildProgram failed with error:\n %s.\n",
-              log);
-    bp5_free(&log);
-    bp5_error("clBuildProgram failed.");
+    nekbone_debug(
+        verbose,
+        "opencl_kernels_init: clBuildProgram failed with error:\n %s.\n", log);
+    nekbone_free(&log);
+    nekbone_error("clBuildProgram failed.");
   }
-  bp5_debug(verbose, "opencl_kernels_init: done.\n");
+  nekbone_debug(verbose, "opencl_kernels_init: done.\n");
 
-  bp5_debug(verbose, "opencl_kernels_init: create kernels ...\n");
+  nekbone_debug(verbose, "opencl_kernels_init: create kernels ...\n");
   mask_kernel = clCreateKernel(ocl_program, "mask", &err);
   check(err, "clCreateKernel(mask)");
   zero_kernel = clCreateKernel(ocl_program, "zero", &err);
@@ -434,7 +437,7 @@ static void opencl_kernels_init(const uint verbose) {
   gs_kernel = clCreateKernel(ocl_program, "gs_v00", &err);
   check(err, "clCreateKernel(gs)");
 
-  bp5_debug(verbose, "opencl_kernels_init: done.\n");
+  nekbone_debug(verbose, "opencl_kernels_init: done.\n");
 }
 
 static void mask(cl_mem *mem, const uint n) {
@@ -583,25 +586,26 @@ static void gs(cl_mem *x, const cl_mem *gs_off, const cl_mem *gs_idx,
   check(clFinish(ocl_queue), "clFinish(gs)");
 }
 
-static void opencl_init(const struct bp5_t *bp5) {
+static void opencl_init(const struct nekbone_t *nekbone) {
   if (initialized)
     return;
-  bp5_debug(bp5->verbose, "opencl_init: initializing OpenCL backend ...\n");
+  nekbone_debug(nekbone->verbose,
+                "opencl_init: initializing OpenCL backend ...\n");
 
-  opencl_device_init(bp5);
-  opencl_kernels_init(bp5->verbose);
-  opencl_mem_init(bp5);
+  opencl_device_init(nekbone);
+  opencl_kernels_init(nekbone->verbose);
+  opencl_mem_init(nekbone);
 
   initialized = 1;
-  bp5_debug(bp5->verbose, "opencl_init: done.\n");
+  nekbone_debug(nekbone->verbose, "opencl_init: done.\n");
 }
 
-static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
+static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
   if (!initialized)
-    bp5_error("opencl_run: OpenCL backend is not initialized.\n");
+    nekbone_error("opencl_run: OpenCL backend is not initialized.\n");
 
-  const uint n = bp5_get_local_dofs(bp5);
-  bp5_debug(bp5->verbose, "opencl_run: ... n=%u\n", n);
+  const uint n = nekbone_get_local_dofs(nekbone);
+  nekbone_debug(nekbone->verbose, "opencl_run: ... n=%u\n", n);
 
   clock_t t0 = clock();
 
@@ -622,7 +626,7 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n));
   scalar r0 = rnorm;
-  for (uint i = 0; i < bp5->max_iter; ++i) {
+  for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(&z_mem, &r_mem, n);
 
@@ -634,8 +638,8 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
       beta = 0;
     add2s1(&p_mem, &z_mem, beta, n);
 
-    ax(&w_mem, &p_mem, &g_mem, &D_mem, bp5->nelt, bp5->nx1);
-    gs(&w_mem, &gs_off_mem, &gs_idx_mem, bp5->gs_n);
+    ax(&w_mem, &p_mem, &g_mem, &D_mem, nekbone->nelt, nekbone->nx1);
+    gs(&w_mem, &gs_off_mem, &gs_idx_mem, nekbone->gs_n);
     add2s2(&w_mem, &p_mem, 0.1, n);
     mask(&w_mem, n);
 
@@ -647,14 +651,16 @@ static scalar opencl_run(const struct bp5_t *bp5, const scalar *r) {
 
     scalar rtr = glsc3(&r_mem, &c_mem, &r_mem, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "opencl_run: iteration %d, rnorm = %e\n", i, rnorm);
+    nekbone_debug(nekbone->verbose, "opencl_run: iteration %d, rnorm = %e\n", i,
+                  rnorm);
   }
   check(clFinish(ocl_queue), "clFinish(cg)");
   clock_t t1 = clock();
 
-  bp5_debug(bp5->verbose, "opencl_run: done.\n");
-  bp5_debug(bp5->verbose, "opencl_run: iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "opencl_run: residual = %e %e.\n", r0, rnorm);
+  nekbone_debug(nekbone->verbose, "opencl_run: done.\n");
+  nekbone_debug(nekbone->verbose, "opencl_run: iterations = %d.\n",
+                nekbone->max_iter);
+  nekbone_debug(nekbone->verbose, "opencl_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }
@@ -683,15 +689,15 @@ static void opencl_finalize(void) {
   check(clReleaseMemObject(gs_off_mem), "clReleaseMemObject(gs_off)");
   check(clReleaseMemObject(gs_idx_mem), "clReleaseMemObject(gs_idx)");
   check(clReleaseMemObject(wrk_mem), "clReleaseMemObject(wrk)");
-  bp5_free(&wrk);
+  nekbone_free(&wrk);
   check(clReleaseCommandQueue(ocl_queue), "clReleaseCommandQueue");
   check(clReleaseContext(ocl_ctx), "clReleaseContext");
 
   initialized = 0;
 }
 
-void bp5_opencl_init(void) {
-  bp5_register_backend("OPENCL", opencl_init, opencl_run, opencl_finalize);
+void nekbone_opencl_init(void) {
+  nekbone_register_backend("OPENCL", opencl_init, opencl_run, opencl_finalize);
 }
 
 #undef check

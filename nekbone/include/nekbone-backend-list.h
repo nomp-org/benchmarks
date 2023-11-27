@@ -1,0 +1,4 @@
+NEKBONE_BACKEND(nekbone_cuda_init)
+NEKBONE_BACKEND(nekbone_hip_init)
+NEKBONE_BACKEND(nekbone_opencl_init)
+NEKBONE_BACKEND(nekbone_nomp_init)

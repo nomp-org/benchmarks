@@ -1,4 +1,4 @@
-#include "bp5-backend.h"
+#include "nekbone-backend.h"
 
 static uint initialized = 0;
 
@@ -10,78 +10,80 @@ static const uint *gs_off, *gs_idx;
 scalar *ur, *us, *ut;
 static uint dofs, nelt, nx1, gs_n;
 
-static void mem_init(const struct bp5_t *bp5) {
-  bp5_debug(bp5->verbose, "mem_init: copy problem data to device ...\n");
+static void mem_init(const struct nekbone_t *nekbone) {
+  nekbone_debug(nekbone->verbose,
+                "mem_init: copy problem data to device ...\n");
 
   // We allocate following arrays used in CG on both host and device.
   // Techinically we don't need the host arrays if we always run on the device.
   // But in the case nomp is not enabled, we need these arrays on host.
-  dofs = bp5_get_local_dofs(bp5);
-  r = bp5_calloc(scalar, dofs);
-  x = bp5_calloc(scalar, dofs);
-  z = bp5_calloc(scalar, dofs);
-  p = bp5_calloc(scalar, dofs);
-  w = bp5_calloc(scalar, dofs);
+  dofs = nekbone_get_local_dofs(nekbone);
+  r = nekbone_calloc(scalar, dofs);
+  x = nekbone_calloc(scalar, dofs);
+  z = nekbone_calloc(scalar, dofs);
+  p = nekbone_calloc(scalar, dofs);
+  w = nekbone_calloc(scalar, dofs);
 #pragma nomp update(alloc : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],    \
                         w[0, dofs])
 
   // There is no need to allcoate following arrays on host. We just copy them
   // into the device.
-  c = bp5->c, g = bp5->g, D = bp5->D;
-  nelt = bp5->nelt, nx1 = bp5->nx1;
+  c = nekbone->c, g = nekbone->g, D = nekbone->D;
+  nelt = nekbone->nelt, nx1 = nekbone->nx1;
 #pragma nomp update(to : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
-  gs_n = bp5->gs_n;
-  gs_off = bp5->gs_off, gs_idx = bp5->gs_idx;
+  gs_n = nekbone->gs_n;
+  gs_off = nekbone->gs_off, gs_idx = nekbone->gs_idx;
 #pragma nomp update(to : gs_off[0, gs_n + 1], gs_idx[0, gs_off[gs_n]])
 
   // Work array on device and host.
-  ur = bp5_calloc(scalar, dofs);
-  us = bp5_calloc(scalar, dofs);
-  ut = bp5_calloc(scalar, dofs);
+  ur = nekbone_calloc(scalar, dofs);
+  us = nekbone_calloc(scalar, dofs);
+  ut = nekbone_calloc(scalar, dofs);
 #pragma nomp update(alloc : ur[0, dofs], us[0, dofs], ut[0, dofs])
 
-  bp5_debug(bp5->verbose, "mem_init: done.\n");
+  nekbone_debug(nekbone->verbose, "mem_init: done.\n");
 }
 
-static void _nomp_init(const struct bp5_t *bp5) {
+static void _nomp_init(const struct nekbone_t *nekbone) {
   if (initialized)
     return;
-  bp5_debug(bp5->verbose, "nomp_init: initializing nomp backend ...\n");
+  nekbone_debug(nekbone->verbose, "nomp_init: initializing nomp backend ...\n");
 
   char verbose[BUFSIZ], device[BUFSIZ], platform[BUFSIZ];
-  snprintf(verbose, BUFSIZ, "%u", bp5->verbose);
-  snprintf(device, BUFSIZ, "%u", bp5->device);
-  snprintf(platform, BUFSIZ, "%u", bp5->platform);
+  snprintf(verbose, BUFSIZ, "%u", nekbone->verbose);
+  snprintf(device, BUFSIZ, "%u", nekbone->device);
+  snprintf(platform, BUFSIZ, "%u", nekbone->platform);
 
   const int argc = 10;
-  char *argv[] = {
-      "--nomp-device",      device,         "--nomp-backend",  "hip",
-      "--nomp-verbose",     verbose,        "--nomp-platform", platform,
-      "--nomp-scripts-dir", BP5_SCRIPTS_DIR};
+  char *argv[] = {"--nomp-device",      device,
+                  "--nomp-backend",     "hip",
+                  "--nomp-verbose",     verbose,
+                  "--nomp-platform",    platform,
+                  "--nomp-scripts-dir", NEKBONE_SCRIPTS_DIR};
 
 #pragma nomp init(argc, argv)
 
-  mem_init(bp5);
+  mem_init(nekbone);
 
   initialized = 1;
-  bp5_debug(bp5->verbose, "nomp_init: done.\n");
+  nekbone_debug(nekbone->verbose, "nomp_init: done.\n");
 }
 
 inline static void zero(scalar *v, const uint n) {
-#pragma nomp for transform("bp5", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop")
   for (uint i = 0; i < n; i++)
     v[i] = 0;
 }
 
 inline static void copy(scalar *a, const scalar *b, const uint n) {
-#pragma nomp for transform("bp5", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop")
   for (uint i = 0; i < n; i++)
     a[i] = b[i];
 }
 
 inline static void mask(scalar *v, const uint n) {
-#pragma nomp for transform("bp5", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop")
   for (uint i = 0; i < n; i++) {
     if (i == 0)
       v[i] = 0;
@@ -90,14 +92,14 @@ inline static void mask(scalar *v, const uint n) {
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for transform("bp5", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop")
   for (uint i = 0; i < n; i++)
     a[i] = c * a[i] + b[i];
 }
 
 inline static void add2s2(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for transform("bp5", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop")
   for (uint i = 0; i < n; i++)
     a[i] += c * b[i];
 }
@@ -115,7 +117,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
 
 inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
                       const uint gs_n) {
-#pragma nomp for transform("bp5", "gs")
+#pragma nomp for transform("nekbone", "gs")
   for (uint i = 0; i < gs_n; i++) {
     scalar s = 0;
     for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
@@ -127,21 +129,21 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const uint nelt, const uint nx1) {
-#pragma nomp for transform("bp5", "ax")
+#pragma nomp for transform("nekbone", "ax")
   for (uint e = 0; e < nelt; e++) {
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
-          ur[BP5_IDX4(i, j, k, e)] = 0;
-          us[BP5_IDX4(i, j, k, e)] = 0;
-          ut[BP5_IDX4(i, j, k, e)] = 0;
+          ur[NEKBONE_IDX4(i, j, k, e)] = 0;
+          us[NEKBONE_IDX4(i, j, k, e)] = 0;
+          ut[NEKBONE_IDX4(i, j, k, e)] = 0;
           for (uint l = 0; l < nx1; l++) {
-            ur[BP5_IDX4(i, j, k, e)] +=
-                D[BP5_IDX2(l, i)] * u[BP5_IDX4(l, j, k, e)];
-            us[BP5_IDX4(i, j, k, e)] +=
-                D[BP5_IDX2(l, j)] * u[BP5_IDX4(i, l, k, e)];
-            ut[BP5_IDX4(i, j, k, e)] +=
-                D[BP5_IDX2(l, k)] * u[BP5_IDX4(i, j, l, e)];
+            ur[NEKBONE_IDX4(i, j, k, e)] +=
+                D[NEKBONE_IDX2(l, i)] * u[NEKBONE_IDX4(l, j, k, e)];
+            us[NEKBONE_IDX4(i, j, k, e)] +=
+                D[NEKBONE_IDX2(l, j)] * u[NEKBONE_IDX4(i, l, k, e)];
+            ut[NEKBONE_IDX4(i, j, k, e)] +=
+                D[NEKBONE_IDX2(l, k)] * u[NEKBONE_IDX4(i, j, l, e)];
           }
         }
       }
@@ -150,54 +152,54 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
-          const uint gbase = 6 * BP5_IDX4(i, j, k, e);
+          const uint gbase = 6 * NEKBONE_IDX4(i, j, k, e);
           scalar r_G00 = G[gbase + 0];
           scalar r_G01 = G[gbase + 1];
           scalar r_G02 = G[gbase + 2];
           scalar r_G11 = G[gbase + 3];
           scalar r_G12 = G[gbase + 4];
           scalar r_G22 = G[gbase + 5];
-          scalar wr = r_G00 * ur[BP5_IDX4(i, j, k, e)] +
-                      r_G01 * us[BP5_IDX4(i, j, k, e)] +
-                      r_G02 * ut[BP5_IDX4(i, j, k, e)];
-          scalar ws = r_G01 * ur[BP5_IDX4(i, j, k, e)] +
-                      r_G11 * us[BP5_IDX4(i, j, k, e)] +
-                      r_G12 * ut[BP5_IDX4(i, j, k, e)];
-          scalar wt = r_G02 * ur[BP5_IDX4(i, j, k, e)] +
-                      r_G12 * us[BP5_IDX4(i, j, k, e)] +
-                      r_G22 * ut[BP5_IDX4(i, j, k, e)];
-          ur[BP5_IDX4(i, j, k, e)] = wr;
-          us[BP5_IDX4(i, j, k, e)] = ws;
-          ut[BP5_IDX4(i, j, k, e)] = wt;
+          scalar wr = r_G00 * ur[NEKBONE_IDX4(i, j, k, e)] +
+                      r_G01 * us[NEKBONE_IDX4(i, j, k, e)] +
+                      r_G02 * ut[NEKBONE_IDX4(i, j, k, e)];
+          scalar ws = r_G01 * ur[NEKBONE_IDX4(i, j, k, e)] +
+                      r_G11 * us[NEKBONE_IDX4(i, j, k, e)] +
+                      r_G12 * ut[NEKBONE_IDX4(i, j, k, e)];
+          scalar wt = r_G02 * ur[NEKBONE_IDX4(i, j, k, e)] +
+                      r_G12 * us[NEKBONE_IDX4(i, j, k, e)] +
+                      r_G22 * ut[NEKBONE_IDX4(i, j, k, e)];
+          ur[NEKBONE_IDX4(i, j, k, e)] = wr;
+          us[NEKBONE_IDX4(i, j, k, e)] = ws;
+          ut[NEKBONE_IDX4(i, j, k, e)] = wt;
         }
       }
     }
   }
 
-#pragma nomp for transform("bp5", "ax")
+#pragma nomp for transform("nekbone", "ax")
   for (uint e = 0; e < nelt; e++) {
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
           scalar wo = 0;
           for (uint l = 0; l < nx1; l++) {
-            wo += D[BP5_IDX2(i, l)] * ur[BP5_IDX4(l, j, k, e)] +
-                  D[BP5_IDX2(j, l)] * us[BP5_IDX4(i, l, k, e)] +
-                  D[BP5_IDX2(k, l)] * ut[BP5_IDX4(i, j, l, e)];
+            wo += D[NEKBONE_IDX2(i, l)] * ur[NEKBONE_IDX4(l, j, k, e)] +
+                  D[NEKBONE_IDX2(j, l)] * us[NEKBONE_IDX4(i, l, k, e)] +
+                  D[NEKBONE_IDX2(k, l)] * ut[NEKBONE_IDX4(i, j, l, e)];
           }
-          w[BP5_IDX4(i, j, k, e)] = wo;
+          w[NEKBONE_IDX4(i, j, k, e)] = wo;
         }
       }
     }
   }
 }
 
-static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
+static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
   if (!initialized)
-    bp5_error("nomp_run: nomp backend is not initialized.\n");
+    nekbone_error("nomp_run: nomp backend is not initialized.\n");
 
-  const uint n = bp5_get_local_dofs(bp5);
-  bp5_debug(bp5->verbose, "nomp_run: ... n=%u\n", n);
+  const uint n = nekbone_get_local_dofs(nekbone);
+  nekbone_debug(nekbone->verbose, "nomp_run: ... n=%u\n", n);
 
   clock_t t0 = clock();
 
@@ -218,7 +220,7 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
   scalar r0 = rnorm;
-  for (uint i = 0; i < bp5->max_iter; ++i) {
+  for (uint i = 0; i < nekbone->max_iter; ++i) {
     copy(z, r, n);
 
     rtz2 = rtz1;
@@ -229,7 +231,7 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, g, D, bp5->nelt, nx1);
+    ax(w, p, g, D, nekbone->nelt, nx1);
     gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
@@ -242,15 +244,17 @@ static scalar _nomp_run(const struct bp5_t *bp5, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm = sqrt(rtr);
-    bp5_debug(bp5->verbose, "nomp_run: iteration %d, rnorm = %e\n", i, rnorm);
+    nekbone_debug(nekbone->verbose, "nomp_run: iteration %d, rnorm = %e\n", i,
+                  rnorm);
   }
 
 #pragma nomp sync
   clock_t t1 = clock();
 
-  bp5_debug(bp5->verbose, "nomp_run: done.\n");
-  bp5_debug(bp5->verbose, "nomp_run: iterations = %d.\n", bp5->max_iter);
-  bp5_debug(bp5->verbose, "nomp_run: residual = %e %e.\n", r0, rnorm);
+  nekbone_debug(nekbone->verbose, "nomp_run: done.\n");
+  nekbone_debug(nekbone->verbose, "nomp_run: iterations = %d.\n",
+                nekbone->max_iter);
+  nekbone_debug(nekbone->verbose, "nomp_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1 - t0) / CLOCKS_PER_SEC;
 }
@@ -261,22 +265,22 @@ static void _nomp_finalize(void) {
 
 #pragma nomp update(free : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],     \
                         w[0, dofs])
-  bp5_free(&r);
-  bp5_free(&x);
-  bp5_free(&z);
-  bp5_free(&p);
-  bp5_free(&w);
+  nekbone_free(&r);
+  nekbone_free(&x);
+  nekbone_free(&z);
+  nekbone_free(&p);
+  nekbone_free(&w);
 
 #pragma nomp update(free : ur[0, dofs], us[0, dofs], ut[0, dofs])
-  bp5_free(&ur);
-  bp5_free(&us);
-  bp5_free(&ut);
+  nekbone_free(&ur);
+  nekbone_free(&us);
+  nekbone_free(&ut);
 
 #pragma nomp update(free : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
   initialized = 0;
 }
 
-void bp5_nomp_init(void) {
-  bp5_register_backend("NOMP", _nomp_init, _nomp_run, _nomp_finalize);
+void nekbone_nomp_init(void) {
+  nekbone_register_backend("NOMP", _nomp_init, _nomp_run, _nomp_finalize);
 }
