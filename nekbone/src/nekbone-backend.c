@@ -2,7 +2,7 @@
 #include <string.h>
 
 struct nekbone_backend_t {
-  char name[BUFSIZ];
+  char name[BUFSIZ + 1];
   void (*initialize)(const struct nekbone_t *);
   double (*run)(const struct nekbone_t *, const scalar *);
   void (*finalize)(void);
@@ -21,6 +21,7 @@ void nekbone_register_backend(const char *name,
   struct nekbone_backend_t *backend =
       nekbone_calloc(struct nekbone_backend_t, 1);
   strncpy(backend->name, name, BUFSIZ);
+  backend->name[BUFSIZ] = '\0';
   backend->initialize = initialize;
   backend->run = run;
   backend->finalize = finalize;
