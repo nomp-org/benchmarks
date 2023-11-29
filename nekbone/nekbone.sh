@@ -111,6 +111,8 @@ if [[ "${NEKBONE_NOMP}" ==  "ON" ]]; then
     NEKBONE_CC=${NOMP_CLANG_DIR}/bin/clang
     NEKBONE_CFLAGS="-O3 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
     export LDFLAGS="-Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp"
+    # symengine needs libstdc++ from conda.
+    export LDFLAGS="${LDFLAGS} -Wl,-rpath,${CONDA_PREFIX}/lib -L${CONDA_PREFIX}/lib -lstdc++"
   fi
 fi
 
