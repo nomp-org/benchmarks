@@ -9,7 +9,7 @@ static const char *ERR_STR_CUDA_FAILURE = "%s:%d CUDA %s failure: %s.\n";
     ERR_T result_ = (CALL);                                                    \
     if (result_ != SUCCES) {                                                   \
       const char *msg = GET_ERR(result_);                                      \
-      nekbone_error(ERR_STR_CUDA_FAILURE, FNAME, LINE, OP, msg);                   \
+      nekbone_error(ERR_STR_CUDA_FAILURE, FNAME, LINE, OP, msg);               \
     }                                                                          \
   }
 
@@ -23,7 +23,8 @@ static uint *d_gs_off, *d_gs_idx;
 static scalar *d_wrk, *wrk;
 
 static void cuda_mem_init(const struct nekbone_t *nekbone) {
-  nekbone_debug(nekbone->verbose, "cuda_mem_init: copy problem data to device ... ");
+  nekbone_debug(nekbone->verbose,
+                "cuda_mem_init: copy problem data to device ... ");
 
   const uint n = nekbone_get_local_dofs(nekbone);
 
@@ -41,19 +42,22 @@ static void cuda_mem_init(const struct nekbone_t *nekbone) {
 
   // Copy geometric factors and derivative matrix.
   check_driver(cudaMalloc(&d_g, 6 * n * sizeof(scalar)));
-  check_driver(
-      cudaMemcpy(d_g, nekbone->g, 6 * n * sizeof(scalar), cudaMemcpyHostToDevice));
+  check_driver(cudaMemcpy(d_g, nekbone->g, 6 * n * sizeof(scalar),
+                          cudaMemcpyHostToDevice));
 
   check_driver(cudaMalloc(&d_D, nekbone->nx1 * nekbone->nx1 * sizeof(scalar)));
-  check_driver(cudaMemcpy(d_D, nekbone->D, nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
+  check_driver(cudaMemcpy(d_D, nekbone->D,
+                          nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
                           cudaMemcpyHostToDevice));
 
   // Copy gather-scatter offsets and indices.
   check_driver(cudaMalloc(&d_gs_off, (nekbone->gs_n + 1) * sizeof(uint)));
-  check_driver(cudaMemcpy(d_gs_off, nekbone->gs_off, (nekbone->gs_n + 1) * sizeof(uint),
+  check_driver(cudaMemcpy(d_gs_off, nekbone->gs_off,
+                          (nekbone->gs_n + 1) * sizeof(uint),
                           cudaMemcpyHostToDevice));
 
-  check_driver(cudaMalloc(&d_gs_idx, nekbone->gs_off[nekbone->gs_n] * sizeof(uint)));
+  check_driver(
+      cudaMalloc(&d_gs_idx, nekbone->gs_off[nekbone->gs_n] * sizeof(uint)));
   check_driver(cudaMemcpy(d_gs_idx, nekbone->gs_idx,
                           nekbone->gs_off[nekbone->gs_n] * sizeof(uint),
                           cudaMemcpyHostToDevice));
@@ -82,7 +86,7 @@ static void cuda_init(const struct nekbone_t *nekbone) {
   check_driver(cudaGetDeviceCount(&num_devices));
   if (nekbone->device >= (uint)num_devices) {
     nekbone_error("cuda_init: Invalid device id %d, only %d devices available.",
-              nekbone->device, num_devices);
+                  nekbone->device, num_devices);
   }
 
   check_driver(cudaSetDeviceFlags(cudaDeviceMapHost));
@@ -142,13 +146,15 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
     rnorm = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "cuda_run: iteration %d, rnorm = %e\n", i, rnorm);
+    nekbone_debug(nekbone->verbose, "cuda_run: iteration %d, rnorm = %e\n", i,
+                  rnorm);
   }
   check_driver(cudaDeviceSynchronize());
   clock_t t1 = clock() - t0;
 
   nekbone_debug(nekbone->verbose, "cuda_run: done.\n");
-  nekbone_debug(nekbone->verbose, "cuda_run: iterations = %d.\n", nekbone->max_iter);
+  nekbone_debug(nekbone->verbose, "cuda_run: iterations = %d.\n",
+                nekbone->max_iter);
   nekbone_debug(nekbone->verbose, "cuda_run: residual = %e %e.\n", r0, rnorm);
 
   return ((double)t1) / CLOCKS_PER_SEC;
