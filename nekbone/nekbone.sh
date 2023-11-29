@@ -51,7 +51,7 @@ function set_backend() {
       ;;
     *)
       echo "Invalid backend: $1"
-      exit 0
+      exit 1
       ;;
   esac
 }
