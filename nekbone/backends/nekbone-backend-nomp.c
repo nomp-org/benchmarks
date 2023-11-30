@@ -118,7 +118,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
 inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
                       const int gs_n) {
 #pragma nomp for transform("nekbone", "gs")
-  for (uint i = 0; i < gs_n; i++) {
+  for (int i = 0; i < gs_n; i++) {
     scalar s = 0;
     for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
       s += v[gs_idx[j]];

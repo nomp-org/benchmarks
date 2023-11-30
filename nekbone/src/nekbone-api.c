@@ -1,5 +1,5 @@
-#include "nekbone-impl.h"
 #include "nekbone-backend.h"
+#include "nekbone-impl.h"
 #include <ctype.h>
 #include <getopt.h>
 #include <string.h>

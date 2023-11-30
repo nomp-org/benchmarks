@@ -25,7 +25,7 @@ set(NEKBONE_MAX_ITER 100)
 configure_file(${CMAKE_SOURCE_DIR}/include/nekbone-defs.h.in
   ${CMAKE_SOURCE_DIR}/include/nekbone-defs.h @ONLY)
 
-set(SOURCES src/nekbone-impl.c src/nekbone-setup.c src/nekbone-backend.c
+set(SOURCES src/nekbone-api.c src/nekbone-setup.c src/nekbone-backend.c
   backends/nekbone-backend-dummy.c backends/nekbone-backend-nomp.c)
 
 if (ENABLE_OPENCL)
