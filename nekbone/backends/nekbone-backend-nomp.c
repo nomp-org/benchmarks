@@ -131,18 +131,21 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const uint nelt, const uint nx1) {
 #pragma nomp for transform("nekbone", "ax")
   for (uint e = 0; e < nelt; e++) {
+    scalar ur[512];
+    scalar us[512];
+    scalar ut[512];
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
-          ur[NEKBONE_IDX4(i, j, k, e)] = 0;
-          us[NEKBONE_IDX4(i, j, k, e)] = 0;
-          ut[NEKBONE_IDX4(i, j, k, e)] = 0;
+          ur[NEKBONE_IDX3(i, j, k)] = 0;
+          us[NEKBONE_IDX3(i, j, k)] = 0;
+          ut[NEKBONE_IDX3(i, j, k)] = 0;
           for (uint l = 0; l < nx1; l++) {
-            ur[NEKBONE_IDX4(i, j, k, e)] +=
+            ur[NEKBONE_IDX3(i, j, k)] +=
                 D[NEKBONE_IDX2(l, i)] * u[NEKBONE_IDX4(l, j, k, e)];
-            us[NEKBONE_IDX4(i, j, k, e)] +=
+            us[NEKBONE_IDX3(i, j, k)] +=
                 D[NEKBONE_IDX2(l, j)] * u[NEKBONE_IDX4(i, l, k, e)];
-            ut[NEKBONE_IDX4(i, j, k, e)] +=
+            ut[NEKBONE_IDX3(i, j, k)] +=
                 D[NEKBONE_IDX2(l, k)] * u[NEKBONE_IDX4(i, j, l, e)];
           }
         }
@@ -159,33 +162,30 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
           scalar r_G11 = G[gbase + 3];
           scalar r_G12 = G[gbase + 4];
           scalar r_G22 = G[gbase + 5];
-          scalar wr = r_G00 * ur[NEKBONE_IDX4(i, j, k, e)] +
-                      r_G01 * us[NEKBONE_IDX4(i, j, k, e)] +
-                      r_G02 * ut[NEKBONE_IDX4(i, j, k, e)];
-          scalar ws = r_G01 * ur[NEKBONE_IDX4(i, j, k, e)] +
-                      r_G11 * us[NEKBONE_IDX4(i, j, k, e)] +
-                      r_G12 * ut[NEKBONE_IDX4(i, j, k, e)];
-          scalar wt = r_G02 * ur[NEKBONE_IDX4(i, j, k, e)] +
-                      r_G12 * us[NEKBONE_IDX4(i, j, k, e)] +
-                      r_G22 * ut[NEKBONE_IDX4(i, j, k, e)];
-          ur[NEKBONE_IDX4(i, j, k, e)] = wr;
-          us[NEKBONE_IDX4(i, j, k, e)] = ws;
-          ut[NEKBONE_IDX4(i, j, k, e)] = wt;
+          scalar wr = r_G00 * ur[NEKBONE_IDX3(i, j, k)] +
+                      r_G01 * us[NEKBONE_IDX3(i, j, k)] +
+                      r_G02 * ut[NEKBONE_IDX3(i, j, k)];
+          scalar ws = r_G01 * ur[NEKBONE_IDX3(i, j, k)] +
+                      r_G11 * us[NEKBONE_IDX3(i, j, k)] +
+                      r_G12 * ut[NEKBONE_IDX3(i, j, k)];
+          scalar wt = r_G02 * ur[NEKBONE_IDX3(i, j, k)] +
+                      r_G12 * us[NEKBONE_IDX3(i, j, k)] +
+                      r_G22 * ut[NEKBONE_IDX3(i, j, k)];
+          ur[NEKBONE_IDX3(i, j, k)] = wr;
+          us[NEKBONE_IDX3(i, j, k)] = ws;
+          ut[NEKBONE_IDX3(i, j, k)] = wt;
         }
       }
     }
-  }
 
-#pragma nomp for transform("nekbone", "ax")
-  for (uint e = 0; e < nelt; e++) {
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
           scalar wo = 0;
           for (uint l = 0; l < nx1; l++) {
-            wo += D[NEKBONE_IDX2(i, l)] * ur[NEKBONE_IDX4(l, j, k, e)] +
-                  D[NEKBONE_IDX2(j, l)] * us[NEKBONE_IDX4(i, l, k, e)] +
-                  D[NEKBONE_IDX2(k, l)] * ut[NEKBONE_IDX4(i, j, l, e)];
+            wo += D[NEKBONE_IDX2(i, l)] * ur[NEKBONE_IDX3(l, j, k)] +
+                  D[NEKBONE_IDX2(j, l)] * us[NEKBONE_IDX3(i, l, k)] +
+                  D[NEKBONE_IDX2(k, l)] * ut[NEKBONE_IDX3(i, j, l)];
           }
           w[NEKBONE_IDX4(i, j, k, e)] = wo;
         }
