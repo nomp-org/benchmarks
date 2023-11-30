@@ -116,7 +116,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
 }
 
 inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
-                      const uint gs_n) {
+                      const int gs_n) {
 #pragma nomp for transform("nekbone", "gs")
   for (uint i = 0; i < gs_n; i++) {
     scalar s = 0;
@@ -221,6 +221,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
   scalar rnorm = sqrt(glsc3(r, c, r, n));
   scalar r0 = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
+    // Preconditioner (which is just a copy for now).
     copy(z, r, n);
 
     rtz2 = rtz1;

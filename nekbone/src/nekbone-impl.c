@@ -191,6 +191,9 @@ double nekbone_run(const struct nekbone_t *nekbone) {
   // Average the rhs by the inverse multiplicity.
   nekbone_inverse_multiplicity(r, nekbone);
 
+  // Warmup the backend.
+  nekbone_run_backend(nekbone, r);
+
   // Solve the system.
   double elapsed = nekbone_run_backend(nekbone, r);
   nekbone_free(&r);
