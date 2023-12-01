@@ -7,7 +7,6 @@ static const scalar *c, *g, *D;
 static const uint *gs_off, *gs_idx;
 // FIXME: The following doesn't work with nompcc:
 // static scalar *ur, *us, *ut;
-scalar *ur, *us, *ut;
 static uint dofs, nelt, nx1, gs_n;
 
 static void mem_init(const struct nekbone_t *nekbone) {
@@ -35,12 +34,6 @@ static void mem_init(const struct nekbone_t *nekbone) {
   gs_n = nekbone->gs_n;
   gs_off = nekbone->gs_off, gs_idx = nekbone->gs_idx;
 #pragma nomp update(to : gs_off[0, gs_n + 1], gs_idx[0, gs_off[gs_n]])
-
-  // Work array on device and host.
-  ur = nekbone_calloc(scalar, dofs);
-  us = nekbone_calloc(scalar, dofs);
-  ut = nekbone_calloc(scalar, dofs);
-#pragma nomp update(alloc : ur[0, dofs], us[0, dofs], ut[0, dofs])
 
   nekbone_debug(nekbone->verbose, "mem_init: done.\n");
 }
@@ -271,11 +264,6 @@ static void _nomp_finalize(void) {
   nekbone_free(&z);
   nekbone_free(&p);
   nekbone_free(&w);
-
-#pragma nomp update(free : ur[0, dofs], us[0, dofs], ut[0, dofs])
-  nekbone_free(&ur);
-  nekbone_free(&us);
-  nekbone_free(&ut);
 
 #pragma nomp update(free : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
