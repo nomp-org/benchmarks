@@ -241,7 +241,6 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
     nekbone_debug(nekbone->verbose, "nomp_run: iteration %d, rnorm = %e\n", i,
                   rnorm);
   }
-
 #pragma nomp sync
   clock_t t1 = clock();
 
