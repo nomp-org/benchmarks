@@ -64,19 +64,19 @@ static void _nomp_init(const struct nekbone_t *nekbone) {
 }
 
 inline static void zero(scalar *v, const uint n) {
-#pragma nomp for transform("nekbone", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop") name("zero")
   for (uint i = 0; i < n; i++)
     v[i] = 0;
 }
 
 inline static void copy(scalar *a, const scalar *b, const uint n) {
-#pragma nomp for transform("nekbone", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop") name("copy")
   for (uint i = 0; i < n; i++)
     a[i] = b[i];
 }
 
 inline static void mask(scalar *v, const uint n) {
-#pragma nomp for transform("nekbone", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop") name("mask")
   for (uint i = 0; i < n; i++) {
     if (i == 0)
       v[i] = 0;
@@ -85,14 +85,14 @@ inline static void mask(scalar *v, const uint n) {
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for transform("nekbone", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop") name("add2s1")
   for (uint i = 0; i < n; i++)
     a[i] = c * a[i] + b[i];
 }
 
 inline static void add2s2(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-#pragma nomp for transform("nekbone", "grid_loop")
+#pragma nomp for transform("nekbone", "grid_loop") name("add2s2")
   for (uint i = 0; i < n; i++)
     a[i] += c * b[i];
 }
@@ -102,7 +102,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
   // FIXME: This doesn't work with nompcc: scalar wrk[1] = {0};
   scalar wrk[1];
   wrk[0] = 0;
-#pragma nomp for reduce("wrk", "+")
+#pragma nomp for reduce("wrk", "+") name("glsc3")
   for (uint i = 0; i < n; i++)
     wrk[0] += a[i] * b[i] * c[i];
   return wrk[0];
@@ -110,7 +110,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
 
 inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
                       const int gs_n) {
-#pragma nomp for transform("nekbone", "gs")
+#pragma nomp for transform("nekbone", "gs") name("gs")
   for (int i = 0; i < gs_n; i++) {
     scalar s = 0;
     for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
@@ -122,7 +122,7 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const uint nelt, const uint nx1) {
-#pragma nomp for transform("nekbone", "ax")
+#pragma nomp for transform("nekbone", "ax") name("ax")
   for (uint e = 0; e < nelt; e++) {
     scalar ur[512];
     scalar us[512];
