@@ -122,11 +122,11 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const uint nelt, const uint nx1) {
-#pragma nomp for transform("nekbone", "ax") name("ax")
+#pragma nomp for transform("nekbone", "ax") name("ax") jit("nx1")
   for (uint e = 0; e < nelt; e++) {
-    scalar ur[512];
-    scalar us[512];
-    scalar ut[512];
+    scalar ur[nx1 * nx1 * nx1];
+    scalar us[nx1 * nx1 * nx1];
+    scalar ut[nx1 * nx1 * nx1];
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
