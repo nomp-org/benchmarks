@@ -121,7 +121,8 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 }
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
-                      const scalar *D, const uint nelt, const uint nx1) {
+                      const uint nx1, const scalar D[nx1 * nx1],
+                      const uint nelt) {
 #pragma nomp for transform("nekbone", "ax") name("ax") jit("nx1")
   for (uint e = 0; e < nelt; e++) {
     scalar ur[nx1 * nx1 * nx1];
@@ -225,7 +226,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, g, D, nekbone->nelt, nx1);
+    ax(w, p, g, nx1, D, nekbone->nelt);
     gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
