@@ -3,10 +3,10 @@
 static uint initialized = 0;
 
 static scalar *r, *x, *z, *p, *w;
+scalar *wrk;
 static const scalar *c, *g, *D;
 static const uint *gs_off, *gs_idx;
-// FIXME: The following doesn't work with nompcc:
-// static scalar *ur, *us, *ut;
+// FIXME: This doesn't work with nompcc: static scalar *ur, *us, *ut;
 static uint dofs, nelt, nx1, gs_n;
 
 static void mem_init(const struct nekbone_t *nekbone) {
@@ -35,6 +35,7 @@ static void mem_init(const struct nekbone_t *nekbone) {
   gs_off = nekbone->gs_off, gs_idx = nekbone->gs_idx;
 #pragma nomp update(to : gs_off[0, gs_n + 1], gs_idx[0, gs_off[gs_n]])
 
+  wrk = nekbone_calloc(scalar, 1);
   nekbone_debug(nekbone->verbose, "mem_init: done.\n");
 }
 
@@ -100,7 +101,7 @@ inline static void add2s2(scalar *a, const scalar *b, const scalar c,
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
                            const uint n) {
   // FIXME: This doesn't work with nompcc: scalar wrk[1] = {0};
-  scalar wrk[1];
+  // FIXME: This doesn't work witn libnomp: scalar wrk[1];
   wrk[0] = 0;
 #pragma nomp for reduce("wrk", "+") name("glsc3")
   for (uint i = 0; i < n; i++)
@@ -267,6 +268,7 @@ static void _nomp_finalize(void) {
 
 #pragma nomp update(free : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
+  nekbone_free(&wrk);
   initialized = 0;
 }
 
