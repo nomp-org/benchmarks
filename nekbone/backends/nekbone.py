@@ -16,7 +16,7 @@ def gs(knl, context):
     return knl
 
 
-def ax(knl, context):
+def ax(t_unit, context):
     knl = t_unit.default_entrypoint
     knl = knl.copy(
         domains=[knl.combine_domains(tuple(range(len(knl.domains))))]
@@ -27,10 +27,11 @@ def ax(knl, context):
         "D",
         sweep_inames=["i", "i__", "j", "j__", "k", "k__", "l", "l_"],
         fetch_outer_inames=frozenset(["e"]),
+        default_tag=None,
     )
 
-    knl = lp.tag_inames(
-        knl,
+    t_unit = lp.tag_inames(
+        t_unit,
         {
             "e": "g.0",
             "i*": "l.0",
@@ -44,4 +45,4 @@ def ax(knl, context):
         t_unit, "D_dim_1", 1, inner_tag="l.1", outer_tag="l.2"
     )
 
-    return knl
+    return t_unit
