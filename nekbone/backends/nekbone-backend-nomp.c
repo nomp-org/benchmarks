@@ -27,12 +27,16 @@ static void mem_init(const struct nekbone_t *nekbone) {
 
   // There is no need to allcoate following arrays on host. We just copy them
   // into the device.
-  c = nekbone->c, g = nekbone->g, D = nekbone->D;
-  nelt = nekbone->nelt, nx1 = nekbone->nx1;
+  c = nekbone->c;
+  g = nekbone->g;
+  D = nekbone->D;
+  nelt = nekbone->nelt;
+  nx1 = nekbone->nx1;
 #pragma nomp update(to : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
   gs_n = nekbone->gs_n;
-  gs_off = nekbone->gs_off, gs_idx = nekbone->gs_idx;
+  gs_off = nekbone->gs_off;
+  gs_idx = nekbone->gs_idx;
 #pragma nomp update(to : gs_off[0, gs_n + 1], gs_idx[0, gs_off[gs_n]])
 
   wrk = nekbone_calloc(scalar, 1);
@@ -266,6 +270,7 @@ static void _nomp_finalize(void) {
 #pragma nomp update(free : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
   nekbone_free(&wrk);
+
   initialized = 0;
 }
 

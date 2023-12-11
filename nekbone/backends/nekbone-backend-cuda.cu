@@ -1,15 +1,13 @@
 #include "nekbone-backend.h"
 
 static uint initialized = 0;
-static const size_t local_size = 512;
-static const char *ERR_STR_CUDA_FAILURE = "%s:%d CUDA %s failure: %s.\n";
 
 #define check_error(FNAME, LINE, CALL, ERR_T, SUCCES, GET_ERR, OP)             \
   {                                                                            \
     ERR_T result_ = (CALL);                                                    \
     if (result_ != SUCCES) {                                                   \
       const char *msg = GET_ERR(result_);                                      \
-      nekbone_error(ERR_STR_CUDA_FAILURE, FNAME, LINE, OP, msg);               \
+      nekbone_error("%s:%d CUDA %s failure: %s.\n", FNAME, LINE, OP, msg);     \
     }                                                                          \
   }
 
@@ -18,9 +16,10 @@ static const char *ERR_STR_CUDA_FAILURE = "%s:%d CUDA %s failure: %s.\n";
               cudaGetErrorName, "driver");
 
 static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
+static scalar *d_wrk, *wrk;
 static scalar *d_c, *d_g, *d_D;
 static uint *d_gs_off, *d_gs_idx;
-static scalar *d_wrk, *wrk;
+static const size_t local_size = 512;
 
 static void cuda_mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
