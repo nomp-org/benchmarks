@@ -122,7 +122,7 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 }
 
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
-                      const uint nx1, const scalar D[nx1 * nx1],
+                      const uint nx1, const scalar D[nx1][nx1],
                       const uint nelt) {
 #pragma nomp for transform("nekbone", "ax") name("ax") jit("nx1")
   for (uint e = 0; e < nelt; e++) {
@@ -136,12 +136,9 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
           us[NEKBONE_IDX3(i, j, k)] = 0;
           ut[NEKBONE_IDX3(i, j, k)] = 0;
           for (uint l = 0; l < nx1; l++) {
-            ur[NEKBONE_IDX3(i, j, k)] +=
-                D[NEKBONE_IDX2(l, i)] * u[NEKBONE_IDX4(l, j, k, e)];
-            us[NEKBONE_IDX3(i, j, k)] +=
-                D[NEKBONE_IDX2(l, j)] * u[NEKBONE_IDX4(i, l, k, e)];
-            ut[NEKBONE_IDX3(i, j, k)] +=
-                D[NEKBONE_IDX2(l, k)] * u[NEKBONE_IDX4(i, j, l, e)];
+            ur[NEKBONE_IDX3(i, j, k)] += D[i][l] * u[NEKBONE_IDX4(l, j, k, e)];
+            us[NEKBONE_IDX3(i, j, k)] += D[j][l] * u[NEKBONE_IDX4(i, l, k, e)];
+            ut[NEKBONE_IDX3(i, j, k)] += D[k][l] * u[NEKBONE_IDX4(i, j, l, e)];
           }
         }
       }
@@ -178,9 +175,9 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
         for (uint i = 0; i < nx1; i++) {
           scalar wo = 0;
           for (uint l = 0; l < nx1; l++) {
-            wo += D[NEKBONE_IDX2(i, l)] * ur[NEKBONE_IDX3(l, j, k)] +
-                  D[NEKBONE_IDX2(j, l)] * us[NEKBONE_IDX3(i, l, k)] +
-                  D[NEKBONE_IDX2(k, l)] * ut[NEKBONE_IDX3(i, j, l)];
+            wo += D[l][i] * ur[NEKBONE_IDX3(l, j, k)] +
+                  D[l][j] * us[NEKBONE_IDX3(i, l, k)] +
+                  D[l][k] * ut[NEKBONE_IDX3(i, j, l)];
           }
           w[NEKBONE_IDX4(i, j, k, e)] = wo;
         }

@@ -17,7 +17,31 @@ def gs(knl, context):
 
 
 def ax(knl, context):
-    knl = lp.tag_inames(
-        knl, {"e": "g.0", "i*": "l.0", "j*": "l.1", "k*": "l.2", "l*": "ord"}
+    knl = t_unit.default_entrypoint
+    knl = knl.copy(
+        domains=[knl.combine_domains(tuple(range(len(knl.domains))))]
     )
+    t_unit = t_unit.with_kernel(knl)
+    t_unit = lp.add_prefetch(
+        t_unit,
+        "D",
+        sweep_inames=["i", "i__", "j", "j__", "k", "k__", "l", "l_"],
+        fetch_outer_inames=frozenset(["e"]),
+    )
+
+    knl = lp.tag_inames(
+        knl,
+        {
+            "e": "g.0",
+            "i*": "l.0",
+            "j*": "l.1",
+            "k*": "l.2",
+            "l*": "ord",
+            "D_dim_0": "l.0",
+        },
+    )
+    t_unit = lp.split_iname(
+        t_unit, "D_dim_1", 1, inner_tag="l.1", outer_tag="l.2"
+    )
+
     return knl
