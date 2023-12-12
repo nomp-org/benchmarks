@@ -224,7 +224,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, g, nx1, D, nekbone->nelt);
+    ax(w, p, g, nx1, (const scalar (*)[nx1])D, nelt);
     gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
