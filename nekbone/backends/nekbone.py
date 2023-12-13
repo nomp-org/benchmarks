@@ -17,11 +17,25 @@ def gs(knl, context):
 
 
 def ax(t_unit, context):
+    # Put the loop domains in the same leaf node.
     knl = t_unit.default_entrypoint
     knl = knl.copy(
         domains=[knl.combine_domains(tuple(range(len(knl.domains))))]
     )
     t_unit = t_unit.with_kernel(knl)
+
+    t_unit = lp.tag_inames(
+        t_unit,
+        {
+            "e": "g.0",
+            "i*": "l.0",
+            "j*": "l.1",
+            "k*": "l.2",
+            "l*": "ord",
+        },
+    )
+
+    # Prefetch D
     t_unit = lp.add_prefetch(
         t_unit,
         "D",
@@ -33,16 +47,28 @@ def ax(t_unit, context):
     t_unit = lp.tag_inames(
         t_unit,
         {
-            "e": "g.0",
-            "i*": "l.0",
-            "j*": "l.1",
-            "k*": "l.2",
-            "l*": "ord",
             "D_dim_0": "l.0",
         },
     )
     t_unit = lp.split_iname(
         t_unit, "D_dim_1", 1, inner_tag="l.1", outer_tag="l.2"
+    )
+
+    # Prefetch u
+    t_unit = lp.add_prefetch(
+        t_unit,
+        "u",
+        sweep_inames=["i", "j", "k", "l"],
+        fetch_outer_inames=frozenset(["e"]),
+        default_tag=None,
+    )
+    t_unit = lp.tag_inames(
+        t_unit,
+        {
+            "u_dim_1": "l.0",
+            "u_dim_2": "l.1",
+            "u_dim_3": "l.2",
+        },
     )
 
     return t_unit
