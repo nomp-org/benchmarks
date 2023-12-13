@@ -127,7 +127,8 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 
 inline static void ax(const uint nelt, const uint nx1,
                       scalar w[nelt][nx1][nx1][nx1],
-                      const scalar u[nelt][nx1][nx1][nx1], const scalar *G,
+                      const scalar u[nelt][nx1][nx1][nx1],
+                      const scalar G[nelt][nx1][nx1][nx1][6],
                       const scalar D[nx1][nx1]) {
 #pragma nomp for transform("nekbone", "ax") name("ax") jit("nx1")
   for (uint e = 0; e < nelt; e++) {
@@ -152,13 +153,12 @@ inline static void ax(const uint nelt, const uint nx1,
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
         for (uint i = 0; i < nx1; i++) {
-          const uint gbase = 6 * NEKBONE_IDX4(i, j, k, e);
-          scalar r_G00 = G[gbase + 0];
-          scalar r_G01 = G[gbase + 1];
-          scalar r_G02 = G[gbase + 2];
-          scalar r_G11 = G[gbase + 3];
-          scalar r_G12 = G[gbase + 4];
-          scalar r_G22 = G[gbase + 5];
+          scalar r_G00 = G[e][k][j][i][0];
+          scalar r_G01 = G[e][k][j][i][1];
+          scalar r_G02 = G[e][k][j][i][2];
+          scalar r_G11 = G[e][k][j][i][3];
+          scalar r_G12 = G[e][k][j][i][4];
+          scalar r_G22 = G[e][k][j][i][5];
           ur[k][j][i] =
               r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
           us[k][j][i] =
@@ -223,7 +223,8 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
     add2s1(p, z, beta, n);
 
     ax(nelt, nx1, (scalar(*)[nx1][nx1][nx1])w,
-       (const scalar(*)[nx1][nx1][nx1])p, g, (const scalar(*)[nx1])D);
+       (const scalar(*)[nx1][nx1][nx1])p, (const scalar(*)[nx1][nx1][nx1][6])g,
+       (const scalar(*)[nx1])D);
     gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
