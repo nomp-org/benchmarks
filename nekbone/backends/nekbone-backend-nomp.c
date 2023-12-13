@@ -125,9 +125,9 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
   }
 }
 
-inline static void ax(scalar *w, const scalar *u, const scalar *G,
-                      const uint nx1, const scalar D[nx1][nx1],
-                      const uint nelt) {
+inline static void ax(const uint nelt, const uint nx1,
+                      scalar w[nelt][nx1][nx1][nx1], const scalar *u,
+                      const scalar *G, const scalar D[nx1][nx1]) {
 #pragma nomp for transform("nekbone", "ax") name("ax") jit("nx1")
   for (uint e = 0; e < nelt; e++) {
     scalar ur[nx1][nx1][nx1];
@@ -158,15 +158,12 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
           scalar r_G11 = G[gbase + 3];
           scalar r_G12 = G[gbase + 4];
           scalar r_G22 = G[gbase + 5];
-          scalar wr =
+          ur[k][j][i] =
               r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
-          scalar ws =
+          us[k][j][i] =
               r_G01 * ur[k][j][i] + r_G11 * us[k][j][i] + r_G12 * ut[k][j][i];
-          scalar wt =
+          ut[k][j][i] =
               r_G02 * ur[k][j][i] + r_G12 * us[k][j][i] + r_G22 * ut[k][j][i];
-          ur[k][j][i] = wr;
-          us[k][j][i] = ws;
-          ut[k][j][i] = wt;
         }
       }
     }
@@ -179,7 +176,7 @@ inline static void ax(scalar *w, const scalar *u, const scalar *G,
             wo += D[l][i] * ur[k][j][l] + D[l][j] * us[k][l][i] +
                   D[l][k] * ut[l][j][i];
           }
-          w[NEKBONE_IDX4(i, j, k, e)] = wo;
+          w[e][k][j][i] = wo;
         }
       }
     }
@@ -224,7 +221,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
       beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(w, p, g, nx1, (const scalar (*)[nx1])D, nelt);
+    ax(nelt, nx1, (scalar(*)[nx1][nx1][nx1])w, p, g, (const scalar(*)[nx1])D);
     gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
