@@ -54,21 +54,23 @@ def ax(t_unit, context):
         t_unit, "D_dim_1", 1, inner_tag="l.1", outer_tag="l.2"
     )
 
-    # Prefetch u
-    t_unit = lp.add_prefetch(
-        t_unit,
-        "u",
-        sweep_inames=["i", "j", "k", "l"],
-        fetch_outer_inames=frozenset(["e"]),
-        default_tag=None,
-    )
-    t_unit = lp.tag_inames(
-        t_unit,
-        {
-            "u_dim_1": "l.0",
-            "u_dim_2": "l.1",
-            "u_dim_3": "l.2",
-        },
-    )
+    prefetch_u = 0
+    if prefetch_u:
+        # Prefetch U
+        t_unit = lp.add_prefetch(
+            t_unit,
+            "u",
+            sweep_inames=["i", "j", "k", "l"],
+            fetch_outer_inames=frozenset(["e"]),
+            default_tag=None,
+        )
+        t_unit = lp.tag_inames(
+            t_unit,
+            {
+                "u_dim_1": "l.0",
+                "u_dim_2": "l.1",
+                "u_dim_3": "l.2",
+            },
+        )
 
     return t_unit
