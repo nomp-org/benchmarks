@@ -35,7 +35,7 @@ def ax(t_unit, context):
         },
     )
 
-    prefetch_d = 0
+    prefetch_d = 1
     prefetch_u = 0
 
     # Prefetch D
