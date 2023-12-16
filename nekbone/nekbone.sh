@@ -50,7 +50,7 @@ function set_backend() {
       backend_set=1
       ;;
     *)
-      echo "Invalid backend: $1"
+      echo "Error: Invalid backend: $1"
       exit 1
       ;;
   esac
@@ -93,28 +93,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     *)
-      echo "Unknown option: $1"
+      echo "Error: Unknown option: $1"
       print_help
       exit 1
       ;;
   esac
 done
-
-if [[ "${NEKBONE_NOMP}" ==  "ON" ]]; then
-  if [[ -z "${NOMP_INSTALL_DIR}"  ||  -z "${NOMP_CLANG_DIR}" ]]; then
-    echo "Error: NOMP_INSTALL_DIR or NOMP_CLANG_DIR is not defined."
-    exit 1
-  else
-    export NOMP_LIB_DIR=${NOMP_INSTALL_DIR}/lib
-    export NOMP_INC_DIR=${NOMP_INSTALL_DIR}/include
-  
-    NEKBONE_CC=${NOMP_CLANG_DIR}/bin/clang
-    NEKBONE_CFLAGS="-O3 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
-    export LDFLAGS="-Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp"
-    # symengine needs libstdc++ from conda.
-    export LDFLAGS="${LDFLAGS} -Wl,-rpath,${CONDA_PREFIX}/lib -L${CONDA_PREFIX}/lib -lstdc++"
-  fi
-fi
 
 ### Don't touch anything that follows this line. ###
 if [[ -z "${NEKBONE_CC}" ]]; then
@@ -122,6 +106,22 @@ if [[ -z "${NEKBONE_CC}" ]]; then
   exit 1
 fi
 export CC=${NEKBONE_CC}
+
+if [[ "${NEKBONE_NOMP}" ==  "ON" ]]; then
+  if [[ -z "${NOMP_INSTALL_DIR}" ]]; then
+    echo "Error: NOMP_INSTALL_DIR is not defined."
+    exit 1
+  else
+    export NOMP_INC_DIR=${NOMP_INSTALL_DIR}/include
+    NEKBONE_CFLAGS="-O2 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
+
+    export NOMP_LIB_DIR=${NOMP_INSTALL_DIR}/lib
+    export LDFLAGS="-Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp"
+
+    #FIXME: symengine needs libstdc++ from conda.
+    export LDFLAGS="${LDFLAGS} -Wl,-rpath,${CONDA_PREFIX}/lib -L${CONDA_PREFIX}/lib -lstdc++"
+  fi
+fi
 
 NEKBONE_CFLAGS="${NEKBONE_CFLAGS} -Wno-unknown-pragmas"
 export CFLAGS="${NEKBONE_CFLAGS}"
