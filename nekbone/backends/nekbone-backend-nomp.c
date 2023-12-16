@@ -159,12 +159,12 @@ inline static void ax(const uint nelt, const uint nx1,
           scalar r_G11 = G[e][k][j][i][3];
           scalar r_G12 = G[e][k][j][i][4];
           scalar r_G22 = G[e][k][j][i][5];
-          ur[k][j][i] =
-              r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
-          us[k][j][i] =
-              r_G01 * ur[k][j][i] + r_G11 * us[k][j][i] + r_G12 * ut[k][j][i];
-          ut[k][j][i] =
-              r_G02 * ur[k][j][i] + r_G12 * us[k][j][i] + r_G22 * ut[k][j][i];
+          scalar wr = r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
+          scalar ws = r_G01 * ur[k][j][i] + r_G11 * us[k][j][i] + r_G12 * ut[k][j][i];
+          scalar wt = r_G02 * ur[k][j][i] + r_G12 * us[k][j][i] + r_G22 * ut[k][j][i];
+          ur[k][j][i] = wr;
+          us[k][j][i] = ws;
+          ut[k][j][i] = wt;
         }
       }
     }
