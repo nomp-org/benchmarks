@@ -68,30 +68,30 @@ static void _nomp_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nomp_init: done.\n");
 }
 
-inline static void zero(scalar *v, const uint n) {
+inline static void zero(scalar *v, const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("zero")
-  for (uint i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     v[i] = 0;
 }
 
-inline static void copy(scalar *a, const scalar *b, const uint n) {
+inline static void copy(scalar *a, const scalar *b, const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("copy")
-  for (uint i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     a[i] = b[i];
 }
 
-inline static void mask(scalar *v, const uint n) {
+inline static void mask(scalar *v, const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("mask")
-  for (uint i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
     if (i == 0)
       v[i] = 0;
   }
 }
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
-                          const uint n) {
+                          const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("add2s1")
-  for (uint i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     a[i] = c * a[i] + b[i];
 }
 
@@ -103,12 +103,12 @@ inline static void add2s2(scalar *a, const scalar *b, const scalar c,
 }
 
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
-                           const uint n) {
+                           const int n) {
   // FIXME: This doesn't work with nompcc: scalar wrk[1] = {0};
   // FIXME: This doesn't work witn libnomp: scalar wrk[1];
   wrk[0] = 0;
 #pragma nomp for reduce("wrk", "+") name("glsc3")
-  for (uint i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     wrk[0] += a[i] * b[i] * c[i];
   return wrk[0];
 }
@@ -125,23 +125,23 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
   }
 }
 
-inline static void ax(const uint nelt, const uint nx1,
+inline static void ax(const int nelt, const int nx1,
                       scalar w[nelt][nx1][nx1][nx1],
                       const scalar u[nelt][nx1][nx1][nx1],
                       const scalar G[nelt][nx1][nx1][nx1][6],
                       const scalar D[nx1][nx1]) {
 #pragma nomp for transform("nekbone", "ax") name("ax") jit("nx1")
-  for (uint e = 0; e < nelt; e++) {
+  for (int e = 0; e < nelt; e++) {
     scalar ur[nx1][nx1][nx1];
     scalar us[nx1][nx1][nx1];
     scalar ut[nx1][nx1][nx1];
-    for (uint k = 0; k < nx1; k++) {
-      for (uint j = 0; j < nx1; j++) {
-        for (uint i = 0; i < nx1; i++) {
+    for (int k = 0; k < nx1; k++) {
+      for (int j = 0; j < nx1; j++) {
+        for (int i = 0; i < nx1; i++) {
           ur[k][j][i] = 0;
           us[k][j][i] = 0;
           ut[k][j][i] = 0;
-          for (uint l = 0; l < nx1; l++) {
+          for (int l = 0; l < nx1; l++) {
             ur[k][j][i] += D[i][l] * u[e][k][j][l];
             us[k][j][i] += D[j][l] * u[e][k][l][i];
             ut[k][j][i] += D[k][l] * u[e][l][j][i];
@@ -150,18 +150,21 @@ inline static void ax(const uint nelt, const uint nx1,
       }
     }
 
-    for (uint k = 0; k < nx1; k++) {
-      for (uint j = 0; j < nx1; j++) {
-        for (uint i = 0; i < nx1; i++) {
+    for (int k = 0; k < nx1; k++) {
+      for (int j = 0; j < nx1; j++) {
+        for (int i = 0; i < nx1; i++) {
           scalar r_G00 = G[e][k][j][i][0];
           scalar r_G01 = G[e][k][j][i][1];
           scalar r_G02 = G[e][k][j][i][2];
           scalar r_G11 = G[e][k][j][i][3];
           scalar r_G12 = G[e][k][j][i][4];
           scalar r_G22 = G[e][k][j][i][5];
-          scalar wr = r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
-          scalar ws = r_G01 * ur[k][j][i] + r_G11 * us[k][j][i] + r_G12 * ut[k][j][i];
-          scalar wt = r_G02 * ur[k][j][i] + r_G12 * us[k][j][i] + r_G22 * ut[k][j][i];
+          scalar wr =
+              r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
+          scalar ws =
+              r_G01 * ur[k][j][i] + r_G11 * us[k][j][i] + r_G12 * ut[k][j][i];
+          scalar wt =
+              r_G02 * ur[k][j][i] + r_G12 * us[k][j][i] + r_G22 * ut[k][j][i];
           ur[k][j][i] = wr;
           us[k][j][i] = ws;
           ut[k][j][i] = wt;
@@ -169,11 +172,11 @@ inline static void ax(const uint nelt, const uint nx1,
       }
     }
 
-    for (uint k = 0; k < nx1; k++) {
-      for (uint j = 0; j < nx1; j++) {
-        for (uint i = 0; i < nx1; i++) {
+    for (int k = 0; k < nx1; k++) {
+      for (int j = 0; j < nx1; j++) {
+        for (int i = 0; i < nx1; i++) {
           scalar wo = 0;
-          for (uint l = 0; l < nx1; l++) {
+          for (int l = 0; l < nx1; l++) {
             wo += D[l][i] * ur[k][j][l] + D[l][j] * us[k][l][i] +
                   D[l][k] * ut[l][j][i];
           }
