@@ -113,7 +113,7 @@ if [[ "${NEKBONE_NOMP}" ==  "ON" ]]; then
     exit 1
   else
     export NOMP_INC_DIR=${NOMP_INSTALL_DIR}/include
-    NEKBONE_CFLAGS="-O2 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
+    NEKBONE_CFLAGS="-O3 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
 
     export NOMP_LIB_DIR=${NOMP_INSTALL_DIR}/lib
     export LDFLAGS="-Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp"

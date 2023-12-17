@@ -39,7 +39,7 @@ def ax(t_unit, context):
     prefetch_u = 0
 
     # Prefetch D
-    if prefetch_d:
+    if prefetch_d == 1:
         t_unit = lp.add_prefetch(
             t_unit,
             "D",
@@ -59,7 +59,7 @@ def ax(t_unit, context):
         )
 
     # Prefetch U
-    if prefetch_u:
+    if prefetch_u == 1:
         t_unit = lp.add_prefetch(
             t_unit,
             "u",
