@@ -11,10 +11,6 @@
 #include "nekbone-types.h"
 #include "nekbone.h"
 
-#define NEKBONE_IDX2(i, j) ((i) + nx1 * (j))
-#define NEKBONE_IDX3(i, j, k) ((i) + nx1 * ((j) + nx1 * (k)))
-#define NEKBONE_IDX4(i, j, k, l) ((i) + nx1 * ((j) + nx1 * ((k) + nx1 * (l))))
-
 // Dynamic memory allocation function.
 #define nekbone_calloc(T, n) ((T *)calloc(n, sizeof(T)))
 
