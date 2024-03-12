@@ -82,8 +82,7 @@ static void hip_mem_init(const struct nekbone_t *nekbone) {
 #undef unifiedMemcpyDeviceToHost
 
 static void hip_init(const struct nekbone_t *nekbone) {
-  if (initialized)
-    return;
+  if (initialized) return;
   nekbone_debug(nekbone->verbose, "hip_init: initializing hip backend ...\n");
 
   int num_devices = 0;
@@ -103,8 +102,7 @@ static void hip_init(const struct nekbone_t *nekbone) {
 }
 
 static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
-  if (!initialized)
-    nekbone_error("hip_run: hip backend is not initialized.\n");
+  if (!initialized) nekbone_error("hip_run: hip backend is not initialized.\n");
 
   const uint n = nekbone_get_local_dofs(nekbone);
   nekbone_debug(nekbone->verbose, "hip_run: ... n=%u\n", n);
@@ -132,8 +130,7 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
     rtz1 = glsc3(d_r, d_c, d_z, n);
 
     scalar beta = rtz1 / rtz2;
-    if (i == 0)
-      beta = 0;
+    if (i == 0) beta = 0;
     add2s1(d_p, d_z, beta, n);
 
     ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
@@ -164,8 +161,7 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
 }
 
 static void hip_finalize(void) {
-  if (!initialized)
-    return;
+  if (!initialized) return;
 
   check_driver(hipFree(d_r));
   check_driver(hipFree(d_x));

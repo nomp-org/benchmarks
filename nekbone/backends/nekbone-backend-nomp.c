@@ -44,8 +44,7 @@ static void mem_init(const struct nekbone_t *nekbone) {
 }
 
 static void _nomp_init(const struct nekbone_t *nekbone) {
-  if (initialized)
-    return;
+  if (initialized) return;
   nekbone_debug(nekbone->verbose, "nomp_init: initializing nomp backend ...\n");
 
   char verbose[BUFSIZ], device[BUFSIZ], platform[BUFSIZ];
@@ -70,36 +69,31 @@ static void _nomp_init(const struct nekbone_t *nekbone) {
 
 inline static void zero(scalar *v, const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("zero")
-  for (int i = 0; i < n; i++)
-    v[i] = 0;
+  for (int i = 0; i < n; i++) v[i] = 0;
 }
 
 inline static void copy(scalar *a, const scalar *b, const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("copy")
-  for (int i = 0; i < n; i++)
-    a[i] = b[i];
+  for (int i = 0; i < n; i++) a[i] = b[i];
 }
 
 inline static void mask(scalar *v, const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("mask")
   for (int i = 0; i < n; i++) {
-    if (i == 0)
-      v[i] = 0;
+    if (i == 0) v[i] = 0;
   }
 }
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
                           const int n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("add2s1")
-  for (int i = 0; i < n; i++)
-    a[i] = c * a[i] + b[i];
+  for (int i = 0; i < n; i++) a[i] = c * a[i] + b[i];
 }
 
 inline static void add2s2(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
 #pragma nomp for transform("nekbone", "grid_loop") name("add2s2")
-  for (uint i = 0; i < n; i++)
-    a[i] += c * b[i];
+  for (uint i = 0; i < n; i++) a[i] += c * b[i];
 }
 
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
@@ -108,8 +102,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
   // FIXME: This doesn't work witn libnomp: scalar wrk[1];
   wrk[0] = 0;
 #pragma nomp for reduce("wrk", "+") name("glsc3")
-  for (int i = 0; i < n; i++)
-    wrk[0] += a[i] * b[i] * c[i];
+  for (int i = 0; i < n; i++) wrk[0] += a[i] * b[i] * c[i];
   return wrk[0];
 }
 
@@ -118,10 +111,8 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 #pragma nomp for transform("nekbone", "gs") name("gs")
   for (int i = 0; i < gs_n; i++) {
     scalar s = 0;
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
-      s += v[gs_idx[j]];
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++)
-      v[gs_idx[j]] = s;
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++) s += v[gs_idx[j]];
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++) v[gs_idx[j]] = s;
   }
 }
 
@@ -197,8 +188,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
-  for (uint i = 0; i < n; i++)
-    r[i] = f[i];
+  for (uint i = 0; i < n; i++) r[i] = f[i];
 #pragma nomp update(to : r[0, n])
 
   scalar pap = 0;
@@ -221,8 +211,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
     rtz1 = glsc3(r, c, z, n);
 
     scalar beta = rtz1 / rtz2;
-    if (i == 0)
-      beta = 0;
+    if (i == 0) beta = 0;
     add2s1(p, z, beta, n);
 
     ax(nelt, nx1, (scalar(*)[nx1][nx1][nx1])w,
@@ -255,8 +244,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
 }
 
 static void _nomp_finalize(void) {
-  if (!initialized)
-    return;
+  if (!initialized) return;
 
 #pragma nomp update(free : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],     \
                         w[0, dofs])

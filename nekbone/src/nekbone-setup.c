@@ -25,8 +25,7 @@ static uint log_2(const uint x) {
   nekbone_assert(x > 0, "x must be a positive interger.");
   uint l = 0;
   uint x_ = x;
-  while (x_ >>= 1)
-    l++;
+  while (x_ >>= 1) l++;
   nekbone_assert((1 << l) == (int)x, "x must be a power of 2.");
   return l;
 }
@@ -111,8 +110,7 @@ void nekbone_gs_setup(struct nekbone_t *nekbone) {
   uint rdof = 0, d0 = 0, gs_n = 0;
   for (uint d = 1; d < ndof; d++) {
     if (dofs[d].id != dofs[d0].id) {
-      if (d - d0 > 1)
-        gs_n++, rdof += d - d0;
+      if (d - d0 > 1) gs_n++, rdof += d - d0;
       d0 = d;
     }
   }
@@ -159,13 +157,11 @@ void nekbone_read_zwgll(struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_read_zwgll: ...\n");
 
   FILE *fp = fopen("data/zwgll.dat", "r");
-  if (!fp)
-    nekbone_error("nekbone_read_zwgll: zwgll.dat not found.\n");
+  if (!fp) nekbone_error("nekbone_read_zwgll: zwgll.dat not found.\n");
 
   size_t offset = 0;
   const uint nx1 = nekbone->nx1;
-  for (uint lines = 2; lines < nx1; lines++)
-    offset += lines;
+  for (uint lines = 2; lines < nx1; lines++) offset += lines;
 
   char buf[BUFSIZ];
   for (uint i = 0; i < offset; i++) {
@@ -219,34 +215,28 @@ void nekbone_derivative_setup(struct nekbone_t *nekbone) {
   scalar *a = nekbone_calloc(scalar, nx1);
   for (uint i = 0; i < nx1; i++) {
     a[i] = 1;
-    for (uint j = 0; j < i; j++)
-      a[i] = a[i] * (z[i] - z[j]);
-    for (uint j = i + 1; j < nx1; j++)
-      a[i] = a[i] * (z[i] - z[j]);
+    for (uint j = 0; j < i; j++) a[i] = a[i] * (z[i] - z[j]);
+    for (uint j = i + 1; j < nx1; j++) a[i] = a[i] * (z[i] - z[j]);
     a[i] = 1 / a[i];
   }
 
   scalar *D = nekbone->D = nekbone_calloc(scalar, nx1 * nx1);
   for (uint i = 0; i < nx1; i++) {
-    for (uint j = 0; j < nx1; j++)
-      D[i * nx1 + j] = a[i] * (z[i] - z[j]);
+    for (uint j = 0; j < nx1; j++) D[i * nx1 + j] = a[i] * (z[i] - z[j]);
     D[i * nx1 + i] = 1;
   }
 
   for (uint j = 0; j < nx1; j++) {
-    for (uint i = 0; i < nx1; i++)
-      D[j + i * nx1] /= a[j];
+    for (uint i = 0; i < nx1; i++) D[j + i * nx1] /= a[j];
   }
   for (uint j = 0; j < nx1; j++) {
-    for (uint i = 0; i < nx1; i++)
-      D[i + nx1 * j] = 1.0 / D[i + nx1 * j];
+    for (uint i = 0; i < nx1; i++) D[i + nx1 * j] = 1.0 / D[i + nx1 * j];
   }
 
   for (uint i = 0; i < nx1; i++) {
     D[i + nx1 * i] = 0;
     scalar sum = 0;
-    for (uint j = 0; j < nx1; j++)
-      sum = sum + D[i * nx1 + j];
+    for (uint j = 0; j < nx1; j++) sum = sum + D[i * nx1 + j];
     D[i + nx1 * i] = -sum;
   }
 
@@ -260,13 +250,11 @@ void nekbone_inverse_multiplicity_setup(struct nekbone_t *nekbone) {
 
   uint ndof = nekbone_get_local_dofs(nekbone);
   scalar *c = nekbone->c = nekbone_calloc(scalar, ndof);
-  for (uint i = 0; i < ndof; i++)
-    c[i] = 1;
+  for (uint i = 0; i < ndof; i++) c[i] = 1;
 
   nekbone_gs(c, nekbone);
 
-  for (uint i = 0; i < ndof; i++)
-    c[i] = 1 / c[i];
+  for (uint i = 0; i < ndof; i++) c[i] = 1 / c[i];
 
   nekbone_debug(nekbone->verbose,
                 "nekbone_inverse_multiplicity_setup: done.\n");
@@ -276,8 +264,7 @@ void nekbone_inverse_multiplicity(scalar *x, const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_inverse_multiplicity: ...\n");
 
   uint ndof = nekbone_get_local_dofs(nekbone);
-  for (uint i = 0; i < ndof; i++)
-    x[i] = x[i] * nekbone->c[i];
+  for (uint i = 0; i < ndof; i++) x[i] = x[i] * nekbone->c[i];
 
   nekbone_debug(nekbone->verbose, "nekbone_inverse_multiplicity: done.\n");
 }

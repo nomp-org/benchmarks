@@ -1,7 +1,6 @@
 __global__ static void mask_kernel(scalar *v) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i == 0)
-    v[i] = 0;
+  if (i == 0) v[i] = 0;
 }
 
 inline static void mask(scalar *d_v, const uint n) {
@@ -11,8 +10,7 @@ inline static void mask(scalar *d_v, const uint n) {
 
 __global__ static void zero_kernel(scalar *v, const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    v[i] = 0;
+  if (i < n) v[i] = 0;
 }
 
 inline static void zero(scalar *d_v, const uint n) {
@@ -23,8 +21,7 @@ inline static void zero(scalar *d_v, const uint n) {
 __global__ static void copy_kernel(scalar *out, const scalar *in,
                                    const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    out[i] = in[i];
+  if (i < n) out[i] = in[i];
 }
 
 inline static void copy(scalar *d_out, const scalar *d_in, const uint n) {
@@ -35,8 +32,7 @@ inline static void copy(scalar *d_out, const scalar *d_in, const uint n) {
 __global__ static void add2s1_kernel(scalar *a, const scalar *b, const scalar c,
                                      const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    a[i] = c * a[i] + b[i];
+  if (i < n) a[i] = c * a[i] + b[i];
 }
 
 inline static void add2s1(scalar *d_a, const scalar *d_b, const scalar c,
@@ -48,8 +44,7 @@ inline static void add2s1(scalar *d_a, const scalar *d_b, const scalar c,
 __global__ static void add2s2_kernel(scalar *a, const scalar *b, const scalar c,
                                      const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    a[i] += c * b[i];
+  if (i < n) a[i] += c * b[i];
 }
 
 inline static void add2s2(scalar *d_a, const scalar *d_b, const scalar c,
@@ -71,8 +66,7 @@ __global__ static void glsc3_kernel(scalar *out, const scalar *a,
 
   for (uint s = blockDim.x / 2; s > 0; s >>= 1) {
     __syncthreads();
-    if (threadIdx.x < s)
-      s_abc[threadIdx.x] += s_abc[threadIdx.x + s];
+    if (threadIdx.x < s) s_abc[threadIdx.x] += s_abc[threadIdx.x + s];
   }
   __syncthreads();
   out[blockIdx.x] = s_abc[0];
@@ -87,8 +81,7 @@ inline static scalar glsc3(const scalar *d_a, const scalar *d_b,
 
   check_driver(unifiedMemcpy(wrk, d_wrk, global_size * sizeof(scalar),
                              unifiedMemcpyDeviceToHost));
-  for (uint i = 1; i < global_size; i++)
-    wrk[0] += wrk[i];
+  for (uint i = 1; i < global_size; i++) wrk[0] += wrk[i];
 
   return wrk[0];
 }
@@ -98,10 +91,8 @@ __global__ static void gs_kernel(scalar *v, const uint *gs_off,
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i < n) {
     scalar s = 0;
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j)
-      s += v[gs_idx[j]];
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j)
-      v[gs_idx[j]] = s;
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j) s += v[gs_idx[j]];
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j) v[gs_idx[j]] = s;
   }
 }
 
@@ -111,75 +102,70 @@ inline static void gs(scalar *d_v, const uint *d_gs_off, const uint *d_gs_idx,
   gs_kernel<<<global_size, local_size>>>(d_v, d_gs_off, d_gs_idx, gs_n);
 }
 
-__global__ static void ax_kernel_v00(scalar *w, const scalar *u,
-                                     const scalar *G, const scalar *D,
-                                     const uint nx1) {
-  const uint ebase = blockIdx.x * nx1 * nx1 * nx1;
-  const uint i = threadIdx.x;
-  const uint j = threadIdx.y;
-  const uint k = threadIdx.z;
-
-  extern __shared__ scalar smem[];
-  scalar *s_D = (scalar *)smem;
-  scalar *s_ur = (scalar *)&s_D[nx1 * nx1];
-  scalar *s_us = (scalar *)&s_ur[nx1 * nx1 * nx1];
-  scalar *s_ut = (scalar *)&s_us[nx1 * nx1 * nx1];
-
-  s_ur[NEKBONE_IDX3(i, j, k)] = 0;
-  s_us[NEKBONE_IDX3(i, j, k)] = 0;
-  s_ut[NEKBONE_IDX3(i, j, k)] = 0;
-  if (k == 0)
-    s_D[NEKBONE_IDX2(i, j)] = D[NEKBONE_IDX2(i, j)];
-  __syncthreads();
-
-  for (uint l = 0; l < nx1; ++l) {
-    s_ur[NEKBONE_IDX3(i, j, k)] +=
-        s_D[NEKBONE_IDX2(l, i)] * u[ebase + NEKBONE_IDX3(l, j, k)];
-    s_us[NEKBONE_IDX3(i, j, k)] +=
-        s_D[NEKBONE_IDX2(l, j)] * u[ebase + NEKBONE_IDX3(i, l, k)];
-    s_ut[NEKBONE_IDX3(i, j, k)] +=
-        s_D[NEKBONE_IDX2(l, k)] * u[ebase + NEKBONE_IDX3(i, j, l)];
-  }
-  __syncthreads();
-
-  const uint gbase = 6 * (ebase + NEKBONE_IDX3(i, j, k));
-  scalar r_G00 = G[gbase + 0];
-  scalar r_G01 = G[gbase + 1];
-  scalar r_G02 = G[gbase + 2];
-  scalar r_G11 = G[gbase + 3];
-  scalar r_G12 = G[gbase + 4];
-  scalar r_G22 = G[gbase + 5];
-
-  scalar wr = r_G00 * s_ur[NEKBONE_IDX3(i, j, k)] +
-              r_G01 * s_us[NEKBONE_IDX3(i, j, k)] +
-              r_G02 * s_ut[NEKBONE_IDX3(i, j, k)];
-  scalar ws = r_G01 * s_ur[NEKBONE_IDX3(i, j, k)] +
-              r_G11 * s_us[NEKBONE_IDX3(i, j, k)] +
-              r_G12 * s_ut[NEKBONE_IDX3(i, j, k)];
-  scalar wt = r_G02 * s_ur[NEKBONE_IDX3(i, j, k)] +
-              r_G12 * s_us[NEKBONE_IDX3(i, j, k)] +
-              r_G22 * s_ut[NEKBONE_IDX3(i, j, k)];
-  __syncthreads();
-
-  s_ur[NEKBONE_IDX3(i, j, k)] = wr;
-  s_us[NEKBONE_IDX3(i, j, k)] = ws;
-  s_ut[NEKBONE_IDX3(i, j, k)] = wt;
-  __syncthreads();
-
-  scalar wo = 0;
-  for (uint l = 0; l < nx1; l++) {
-    wo += s_D[NEKBONE_IDX2(i, l)] * s_ur[NEKBONE_IDX3(l, j, k)] +
-          s_D[NEKBONE_IDX2(j, l)] * s_us[NEKBONE_IDX3(i, l, k)] +
-          s_D[NEKBONE_IDX2(k, l)] * s_ut[NEKBONE_IDX3(i, j, l)];
-  }
-  w[ebase + NEKBONE_IDX3(i, j, k)] = wo;
-}
+#define NX1 2
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 3
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 4
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 5
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 6
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 7
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 8
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 9
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
+#define NX1 10
+#include "nekbone-backend-unified-cuda-hip-ax.h"
+#undef NX1
 
 inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
                       const scalar *d_D, const uint nelt, const uint nx1) {
   dim3 local_dim(nx1, nx1, nx1);
   dim3 global_dim(nelt);
   const size_t shared_size = (3 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
-  ax_kernel_v00<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D,
-                                                        nx1);
+  switch (nx1) {
+  case 2:
+    ax_kernel_v00_2<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 3:
+    ax_kernel_v00_3<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 4:
+    ax_kernel_v00_4<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 5:
+    ax_kernel_v00_5<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 6:
+    ax_kernel_v00_6<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 7:
+    ax_kernel_v00_7<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 8:
+    ax_kernel_v00_8<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 9:
+    ax_kernel_v00_9<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
+    break;
+  case 10:
+    ax_kernel_v00_10<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g,
+                                                             d_D);
+    break;
+  default:
+    nekbone_error("Ax kernel for nx1 = %d is not implemented.", nx1);
+    break;
+  }
 }

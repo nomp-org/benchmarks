@@ -27,8 +27,7 @@ static void print_help(const char *name) {
 
 inline static void set_backend(struct nekbone_t *nekbone, const char *backend) {
   size_t len = strnlen(backend, BUFSIZ);
-  for (uint i = 0; i < len; i++)
-    nekbone->backend[i] = toupper(backend[i]);
+  for (uint i = 0; i < len; i++) nekbone->backend[i] = toupper(backend[i]);
 }
 
 static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
@@ -58,31 +57,16 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
   char **argv = *argv_;
   for (;;) {
     int c = getopt_long(*argc, argv, "", long_options, NULL);
-    if (c == -1)
-      break;
+    if (c == -1) break;
 
     switch (c) {
-    case 10:
-      nekbone->verbose = atoi(optarg);
-      break;
-    case 12:
-      nekbone->device = atoi(optarg);
-      break;
-    case 14:
-      nekbone->platform = atoi(optarg);
-      break;
-    case 16:
-      set_backend(nekbone, optarg);
-      break;
-    case 20:
-      nekbone->nelt = atoi(optarg);
-      break;
-    case 22:
-      nekbone->nx1 = atoi(optarg) + 1;
-      break;
-    case 24:
-      nekbone->max_iter = atoi(optarg);
-      break;
+    case 10: nekbone->verbose = atoi(optarg); break;
+    case 12: nekbone->device = atoi(optarg); break;
+    case 14: nekbone->platform = atoi(optarg); break;
+    case 16: set_backend(nekbone, optarg); break;
+    case 20: nekbone->nelt = atoi(optarg); break;
+    case 22: nekbone->nx1 = atoi(optarg) + 1; break;
+    case 24: nekbone->max_iter = atoi(optarg); break;
     case 99:
       print_help(argv[0]);
       exit(EXIT_SUCCESS);
@@ -123,8 +107,7 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
   // Remove parsed arguments from argv. We just need to update the pointers
   // since command line arguments are not transient and available until the
   // end of the program.
-  for (int i = optind; i < *argc; i++)
-    argv[i - optind] = argv[i];
+  for (int i = optind; i < *argc; i++) argv[i - optind] = argv[i];
   *argc -= optind;
 
   return;
@@ -153,8 +136,7 @@ struct nekbone_t *nekbone_init(int *argc, char ***argv) {
 void nekbone_debug(int verbose, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  if (verbose > 0)
-    vprintf(fmt, args);
+  if (verbose > 0) vprintf(fmt, args);
   va_end(args);
 }
 
@@ -204,8 +186,7 @@ double nekbone_run(const struct nekbone_t *nekbone) {
 }
 
 void nekbone_finalize(struct nekbone_t **nekbone_) {
-  if (!nekbone_ || !*nekbone_)
-    return;
+  if (!nekbone_ || !*nekbone_) return;
 
   struct nekbone_t *nekbone = *nekbone_;
   nekbone_debug(nekbone->verbose, "nekbone_finalize: ...\n");

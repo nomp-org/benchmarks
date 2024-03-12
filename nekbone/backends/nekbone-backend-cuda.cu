@@ -77,8 +77,7 @@ static void cuda_mem_init(const struct nekbone_t *nekbone) {
 #undef unifiedMemcpyDeviceToHost
 
 static void cuda_init(const struct nekbone_t *nekbone) {
-  if (initialized)
-    return;
+  if (initialized) return;
   nekbone_debug(nekbone->verbose, "cuda_init: initializing cuda backend ...\n");
 
   int num_devices = 0;
@@ -129,8 +128,7 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
     rtz1 = glsc3(d_r, d_c, d_z, n);
 
     scalar beta = rtz1 / rtz2;
-    if (i == 0)
-      beta = 0;
+    if (i == 0) beta = 0;
     add2s1(d_p, d_z, beta, n);
 
     ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
@@ -162,8 +160,7 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
 }
 
 static void cuda_finalize(void) {
-  if (!initialized)
-    return;
+  if (!initialized) return;
 
   check_driver(cudaFree(d_r));
   check_driver(cudaFree(d_x));

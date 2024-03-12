@@ -74,8 +74,7 @@ scalar nekbone_run_backend(const struct nekbone_t *nekbone, const scalar *rhs) {
 }
 
 void nekbone_unregister_backends(void) {
-  if (backends_capacity == 0)
-    return;
+  if (backends_capacity == 0) return;
 
   for (uint i = 0; i < backends_count; i++) {
     backends[i]->finalize();

@@ -14,9 +14,7 @@ static uint initialized = 0;
 static const char *ERR_STR_OPENCL_FAILURE = "%s failed with error: %d (%s).";
 
 #define CASE(MSG, VAL, STR)                                                    \
-  case VAL:                                                                    \
-    nekbone_error(ERR_STR_OPENCL_FAILURE, MSG, VAL, STR);                      \
-    break;
+  case VAL: nekbone_error(ERR_STR_OPENCL_FAILURE, MSG, VAL, STR); break;
 
 // clang-format off
 #define FOR_EACH_ERROR(S)                                                      \
@@ -488,8 +486,7 @@ static scalar glsc3(cl_mem *a, cl_mem *b, cl_mem *c, const uint n) {
                             sizeof(scalar) * block_size, wrk, 0, NULL, NULL),
         "clEnqueueReadBuffer(glsc3, wrk)");
 
-  for (uint i = 1; i < block_size; i++)
-    wrk[0] += wrk[i];
+  for (uint i = 1; i < block_size; i++) wrk[0] += wrk[i];
 
   return wrk[0];
 }
@@ -587,8 +584,7 @@ static void gs(cl_mem *x, const cl_mem *gs_off, const cl_mem *gs_idx,
 }
 
 static void opencl_init(const struct nekbone_t *nekbone) {
-  if (initialized)
-    return;
+  if (initialized) return;
   nekbone_debug(nekbone->verbose,
                 "opencl_init: initializing OpenCL backend ...\n");
 
@@ -634,8 +630,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
     rtz1 = glsc3(&r_mem, &c_mem, &z_mem, n);
 
     scalar beta = rtz1 / rtz2;
-    if (i == 0)
-      beta = 0;
+    if (i == 0) beta = 0;
     add2s1(&p_mem, &z_mem, beta, n);
 
     ax(&w_mem, &p_mem, &g_mem, &D_mem, nekbone->nelt, nekbone->nx1);
@@ -666,8 +661,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
 }
 
 static void opencl_finalize(void) {
-  if (!initialized)
-    return;
+  if (!initialized) return;
 
   check(clReleaseProgram(ocl_program), "clReleaseProgram");
   check(clReleaseKernel(mask_kernel), "clReleaseKernel(mask)");
