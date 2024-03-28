@@ -18,10 +18,10 @@ static uint initialized = 0;
   check_error(__FILE__, __LINE__, call, hipError_t, hipSuccess,                \
               hipGetErrorName, "driver")
 
-static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
-static scalar *d_wrk, *wrk;
-static scalar *d_c, *d_g, *d_D;
-static uint *d_gs_off, *d_gs_idx;
+static scalar      *d_r, *d_x, *d_z, *d_p, *d_w;
+static scalar      *d_wrk, *wrk;
+static scalar      *d_c, *d_g, *d_D;
+static uint        *d_gs_off, *d_gs_idx;
 static const size_t local_size = 512;
 
 static void hip_mem_init(const struct nekbone_t *nekbone) {
@@ -73,13 +73,76 @@ static void hip_mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "done.\n");
 }
 
-#define unifiedDeviceSynchronize hipDeviceSynchronize
-#define unifiedMemcpy hipMemcpy
-#define unifiedMemcpyDeviceToHost hipMemcpyDeviceToHost
+#define unified_device_synchronize    hipDeviceSynchronize
+#define unified_memcpy                hipMemcpy
+#define unified_memcpy_device_to_host hipMemcpyDeviceToHost
+
+#define unified_rtc_program              hiprtcProgram
+#define unified_rtc_create_program       hiprtcCreateProgram
+#define unified_rtc_result               hiprtcResult
+#define unified_rtc_compile_program      hiprtcCompileProgram
+#define unified_rtc_get_program_log_size hiprtcGetProgramLogSize
+#define unified_rtc_get_program_log      hiprtcGetProgramLog
+#define unified_rtc_get_error_string     hiprtcGetErrorString
+#define unified_rtc_get_code_size        hiprtcGetCodeSize
+#define unified_rtc_get_code             hiprtcGetCode
+#define unified_rtc_destroy_program      hiprtcDestroyProgram
+
+#define unified_rtc_module_t             hipModule_t
+#define unified_rtc_function_t           hipFunction_t
+#define unified_rtc_module_load_data     hipModuleLoadData
+#define unified_rtc_module_get_function  hipModuleGetFunction
+#define unified_rtc_module_unload        hipModuleUnload
+#define unified_rtc_module_launch_kernel hipModuleLaunchKernel
+
+#define UNIFIED_RTC_SUCCESS HIPRTC_SUCCESS
+
+#define check_rtc(call)                                                        \
+  {                                                                            \
+    hiprtcResult result = (call);                                              \
+    if (result != HIPRTC_SUCCESS) {                                            \
+      const char *error = hiprtcGetErrorString(result);                        \
+      nekbone_error(error);                                                    \
+    }                                                                          \
+  }
+
+#define check_runtime(call)                                                    \
+  {                                                                            \
+    hipError_t status = (call);                                                \
+    if (status != hipSuccess) {                                                \
+      const char *error = hipGetErrorName(status);                             \
+      nekbone_error(error);                                                    \
+    }                                                                          \
+  }
+
 #include "nekbone-backend-unified-cuda-hip.h"
-#undef unifiedDeviceSynchronize
-#undef unifiedMemcpy
-#undef unifiedMemcpyDeviceToHost
+
+#undef unified_device_synchronize
+#undef unified_memcpy
+#undef unified_memcpy_device_to_host
+
+#undef unified_rtc_program
+#undef unified_rtc_create_program
+#undef unified_rtc_result
+#undef unified_rtc_compile_program
+#undef unified_rtc_get_program_log_size
+#undef unified_rtc_get_program_log
+#undef unified_rtc_get_error_string
+#undef unified_rtc_get_code_size
+#undef unified_rtc_get_code
+#undef unified_rtc_destroy_program
+
+#undef unified_rtc_module_t
+#undef unified_rtc_function_t
+#undef unified_rtc_module_load_data
+#undef unified_rtc_module_get_function
+#undef unified_rtc_module_unload
+#undef unified_rtc_module_launch_kernel
+
+#undef UNIFIED_RTC_SUCCESS
+
+#undef check_rtc
+#undef check_runtime
 
 static void hip_init(const struct nekbone_t *nekbone) {
   if (initialized) return;
@@ -107,12 +170,14 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
   const uint n = nekbone_get_local_dofs(nekbone);
   nekbone_debug(nekbone->verbose, "hip_run: ... n=%u\n", n);
 
+  ax_dynamic_setup(nekbone->nelt, nekbone->nx1);
+
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
   check_driver(hipMemcpy(d_r, r, n * sizeof(scalar), hipMemcpyHostToDevice));
 
-  scalar pap = 0;
+  scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
 
   // Zero out the solution.
@@ -133,7 +198,8 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
     if (i == 0) beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-    ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
+    // ax_static(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
+    ax_dynamic(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
     gs(d_w, d_gs_off, d_gs_idx, nekbone->gs_n);
     add2s2(d_w, d_p, 0.1, n);
     mask(d_w, n);
@@ -145,12 +211,14 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(d_r, d_w, -alpha, n);
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
-    rnorm = sqrt(rtr);
+    rnorm      = sqrt(rtr);
     nekbone_debug(nekbone->verbose, "hip_run: iteration %d, rnorm = %e\n", i,
                   rnorm);
   }
   check_driver(hipDeviceSynchronize());
   clock_t t1 = clock() - t0;
+
+  ax_dynamic_finalize();
 
   nekbone_debug(nekbone->verbose, "hip_run: done.\n");
   nekbone_debug(nekbone->verbose, "hip_run: iterations = %d.\n",

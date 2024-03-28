@@ -1,11 +1,11 @@
 #define TOKEN_PASTE_(x, y) x##y
-#define TOKEN_PASTE(x, y) TOKEN_PASTE_(x, y)
+#define TOKEN_PASTE(x, y)  TOKEN_PASTE_(x, y)
 
 #ifndef NX1
 #error "NX1 must be defined !"
 #endif
 
-#define NEKBONE_IDX2(i, j) ((i) + NX1 * (j))
+#define NEKBONE_IDX2(i, j)    ((i) + NX1 * (j))
 #define NEKBONE_IDX3(i, j, k) ((i) + NX1 * ((j) + NX1 * (k)))
 
 #define ax_kernel TOKEN_PASTE(ax_kernel_v00_, NX1)
@@ -14,9 +14,9 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
     ax_kernel(scalar *__restrict__ w, const scalar *__restrict__ u,
               const scalar *__restrict__ G, const scalar *__restrict__ D) {
   const uint ebase = blockIdx.x * NX1 * NX1 * NX1;
-  const uint i = threadIdx.x;
-  const uint j = threadIdx.y;
-  const uint k = threadIdx.z;
+  const uint i     = threadIdx.x;
+  const uint j     = threadIdx.y;
+  const uint k     = threadIdx.z;
 
   __shared__ scalar s_D[NX1][NX1];
   __shared__ scalar s_ur[NX1][NX1][NX1];
@@ -37,12 +37,12 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
   __syncthreads();
 
   const uint gbase = 6 * (ebase + NEKBONE_IDX3(i, j, k));
-  scalar r_G00 = G[gbase + 0];
-  scalar r_G01 = G[gbase + 1];
-  scalar r_G02 = G[gbase + 2];
-  scalar r_G11 = G[gbase + 3];
-  scalar r_G12 = G[gbase + 4];
-  scalar r_G22 = G[gbase + 5];
+  scalar     r_G00 = G[gbase + 0];
+  scalar     r_G01 = G[gbase + 1];
+  scalar     r_G02 = G[gbase + 2];
+  scalar     r_G11 = G[gbase + 3];
+  scalar     r_G12 = G[gbase + 4];
+  scalar     r_G22 = G[gbase + 5];
 
   scalar wr =
       r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] + r_G02 * s_ut[k][j][i];
