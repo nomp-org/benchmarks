@@ -19,11 +19,10 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
   const uint j = threadIdx.y;
   const uint k = threadIdx.z;
 
-  extern __shared__ scalar smem[];
-  scalar *s_D = (scalar *)smem;
-  scalar *s_ur = (scalar *)&s_D[NX1 * NX1];
-  scalar *s_us = (scalar *)&s_ur[NX1 * NX1 * NX1];
-  scalar *s_ut = (scalar *)&s_us[NX1 * NX1 * NX1];
+  __shared__ scalar s_D[NX1 * NX1];
+  __shared__ scalar s_ur[NX1 * NX1 * NX1];
+  __shared__ scalar s_us[NX1 * NX1 * NX1];
+  __shared__ scalar s_ut[NX1 * NX1 * NX1];
 
   s_ur[NEKBONE_IDX3(i, j, k)] = 0;
   if (k == 0) s_D[NEKBONE_IDX2(i, j)] = D[NEKBONE_IDX2(i, j)];

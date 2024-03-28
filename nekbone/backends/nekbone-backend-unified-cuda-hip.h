@@ -134,35 +134,17 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
                       const scalar *d_D, const uint nelt, const uint nx1) {
   dim3 local_dim(nx1, nx1, nx1);
   dim3 global_dim(nelt);
-  const size_t shared_size = (3 * nx1 * nx1 * nx1 + nx1 * nx1) * sizeof(scalar);
   switch (nx1) {
-  case 2:
-    ax_kernel_v00_2<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 3:
-    ax_kernel_v00_3<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 4:
-    ax_kernel_v00_4<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 5:
-    ax_kernel_v00_5<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 6:
-    ax_kernel_v00_6<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 7:
-    ax_kernel_v00_7<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 8:
-    ax_kernel_v00_8<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
-  case 9:
-    ax_kernel_v00_9<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g, d_D);
-    break;
+  case 2: ax_kernel_v00_2<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 3: ax_kernel_v00_3<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 4: ax_kernel_v00_4<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 5: ax_kernel_v00_5<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 6: ax_kernel_v00_6<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 7: ax_kernel_v00_7<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 8: ax_kernel_v00_8<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
+  case 9: ax_kernel_v00_9<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D); break;
   case 10:
-    ax_kernel_v00_10<<<global_dim, local_dim, shared_size>>>(d_w, d_u, d_g,
-                                                             d_D);
+    ax_kernel_v00_10<<<global_dim, local_dim>>>(d_w, d_u, d_g, d_D);
     break;
   default:
     nekbone_error("Ax kernel for nx1 = %d is not implemented.", nx1);
