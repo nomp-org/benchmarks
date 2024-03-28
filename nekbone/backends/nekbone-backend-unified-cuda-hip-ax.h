@@ -19,24 +19,21 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
   const uint j = threadIdx.y;
   const uint k = threadIdx.z;
 
-  __shared__ scalar s_D[NX1 * NX1];
-  __shared__ scalar s_ur[NX1 * NX1 * NX1];
-  __shared__ scalar s_us[NX1 * NX1 * NX1];
-  __shared__ scalar s_ut[NX1 * NX1 * NX1];
+  __shared__ scalar s_D[NX1][NX1];
+  __shared__ scalar s_ur[NX1][NX1][NX1];
+  __shared__ scalar s_us[NX1][NX1][NX1];
+  __shared__ scalar s_ut[NX1][NX1][NX1];
 
-  s_ur[NEKBONE_IDX3(i, j, k)] = 0;
-  if (k == 0) s_D[NEKBONE_IDX2(i, j)] = D[NEKBONE_IDX2(i, j)];
-  s_us[NEKBONE_IDX3(i, j, k)] = 0;
-  s_ut[NEKBONE_IDX3(i, j, k)] = 0;
+  s_ur[k][j][i] = 0;
+  if (k == 0) s_D[j][i] = D[NEKBONE_IDX2(i, j)];
+  s_us[k][j][i] = 0;
+  s_ut[k][j][i] = 0;
   __syncthreads();
 
   for (uint l = 0; l < NX1; ++l) {
-    s_ur[NEKBONE_IDX3(i, j, k)] +=
-        s_D[NEKBONE_IDX2(l, i)] * u[ebase + NEKBONE_IDX3(l, j, k)];
-    s_us[NEKBONE_IDX3(i, j, k)] +=
-        s_D[NEKBONE_IDX2(l, j)] * u[ebase + NEKBONE_IDX3(i, l, k)];
-    s_ut[NEKBONE_IDX3(i, j, k)] +=
-        s_D[NEKBONE_IDX2(l, k)] * u[ebase + NEKBONE_IDX3(i, j, l)];
+    s_ur[k][j][i] += s_D[i][l] * u[ebase + NEKBONE_IDX3(l, j, k)];
+    s_us[k][j][i] += s_D[j][l] * u[ebase + NEKBONE_IDX3(i, l, k)];
+    s_ut[k][j][i] += s_D[k][l] * u[ebase + NEKBONE_IDX3(i, j, l)];
   }
   __syncthreads();
 
@@ -48,27 +45,23 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
   scalar r_G12 = G[gbase + 4];
   scalar r_G22 = G[gbase + 5];
 
-  scalar wr = r_G00 * s_ur[NEKBONE_IDX3(i, j, k)] +
-              r_G01 * s_us[NEKBONE_IDX3(i, j, k)] +
-              r_G02 * s_ut[NEKBONE_IDX3(i, j, k)];
-  scalar ws = r_G01 * s_ur[NEKBONE_IDX3(i, j, k)] +
-              r_G11 * s_us[NEKBONE_IDX3(i, j, k)] +
-              r_G12 * s_ut[NEKBONE_IDX3(i, j, k)];
-  scalar wt = r_G02 * s_ur[NEKBONE_IDX3(i, j, k)] +
-              r_G12 * s_us[NEKBONE_IDX3(i, j, k)] +
-              r_G22 * s_ut[NEKBONE_IDX3(i, j, k)];
+  scalar wr =
+      r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] + r_G02 * s_ut[k][j][i];
+  scalar ws =
+      r_G01 * s_ur[k][j][i] + r_G11 * s_us[k][j][i] + r_G12 * s_ut[k][j][i];
+  scalar wt =
+      r_G02 * s_ur[k][j][i] + r_G12 * s_us[k][j][i] + r_G22 * s_ut[k][j][i];
   __syncthreads();
 
-  s_ur[NEKBONE_IDX3(i, j, k)] = wr;
-  s_us[NEKBONE_IDX3(i, j, k)] = ws;
-  s_ut[NEKBONE_IDX3(i, j, k)] = wt;
+  s_ur[k][j][i] = wr;
+  s_us[k][j][i] = ws;
+  s_ut[k][j][i] = wt;
   __syncthreads();
 
   scalar wo = 0;
   for (uint l = 0; l < NX1; l++) {
-    wo += s_D[NEKBONE_IDX2(i, l)] * s_ur[NEKBONE_IDX3(l, j, k)] +
-          s_D[NEKBONE_IDX2(j, l)] * s_us[NEKBONE_IDX3(i, l, k)] +
-          s_D[NEKBONE_IDX2(k, l)] * s_ut[NEKBONE_IDX3(i, j, l)];
+    wo += s_D[l][i] * s_ur[k][j][l] + s_D[l][j] * s_us[k][l][i] +
+          s_D[l][k] * s_ut[l][j][i];
   }
   w[ebase + NEKBONE_IDX3(i, j, k)] = wo;
 }
