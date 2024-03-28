@@ -7,7 +7,6 @@
 
 #define NEKBONE_IDX2(i, j) ((i) + NX1 * (j))
 #define NEKBONE_IDX3(i, j, k) ((i) + NX1 * ((j) + NX1 * (k)))
-#define NEKBONE_IDX4(i, j, k, l) ((i) + NX1 * ((j) + NX1 * ((k) + NX1 * (l))))
 
 #define ax_kernel TOKEN_PASTE(ax_kernel_v00_, NX1)
 
@@ -70,7 +69,6 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
 
 #undef NEKBONE_IDX2
 #undef NEKBONE_IDX3
-#undef NEKBONE_IDX4
 
 #undef TOKEN_PASTE
 #undef TOKEN_PASTE_
