@@ -11,8 +11,9 @@
 
 #define ax_kernel TOKEN_PASTE(ax_kernel_v00_, NX1)
 
-__global__ static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
-                                 const scalar *D) {
+__global__ static void __launch_bounds__(NX1 *NX1 *NX1)
+    ax_kernel(scalar *__restrict__ w, const scalar *__restrict__ u,
+              const scalar *__restrict__ G, const scalar *__restrict__ D) {
   const uint ebase = blockIdx.x * NX1 * NX1 * NX1;
   const uint i = threadIdx.x;
   const uint j = threadIdx.y;
@@ -25,9 +26,9 @@ __global__ static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
   scalar *s_ut = (scalar *)&s_us[NX1 * NX1 * NX1];
 
   s_ur[NEKBONE_IDX3(i, j, k)] = 0;
+  if (k == 0) s_D[NEKBONE_IDX2(i, j)] = D[NEKBONE_IDX2(i, j)];
   s_us[NEKBONE_IDX3(i, j, k)] = 0;
   s_ut[NEKBONE_IDX3(i, j, k)] = 0;
-  if (k == 0) s_D[NEKBONE_IDX2(i, j)] = D[NEKBONE_IDX2(i, j)];
   __syncthreads();
 
   for (uint l = 0; l < NX1; ++l) {
