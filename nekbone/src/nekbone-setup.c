@@ -2,7 +2,7 @@
 
 struct dof_t {
   ulong id;
-  uint idx;
+  uint  idx;
 };
 
 static int cmp_dof_t(const void *a, const void *b) {
@@ -23,7 +23,7 @@ static int cmp_dof_t(const void *a, const void *b) {
 
 static uint log_2(const uint x) {
   nekbone_assert(x > 0, "x must be a positive interger.");
-  uint l = 0;
+  uint l  = 0;
   uint x_ = x;
   while (x_ >>= 1) l++;
   nekbone_assert((1 << l) == (int)x, "x must be a power of 2.");
@@ -54,32 +54,32 @@ void nekbone_gs_setup(struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
                 "Calculating the global element number for each "
                 "local element ...\n");
-  uint *lglel = nekbone_calloc(uint, nelt);
-  uint e = 0;
+  uint      *lglel = nekbone_calloc(uint, nelt);
+  uint       e     = 0;
   const uint nelxy = nelx * nely;
   for (uint k = 0; k < nelz; k++) {
     for (uint j = 0; j < nely; j++) {
       for (uint i = 0; i < nelx; i++) {
         lglel[e] = 1 + i + j * nelx + k * nelxy;
-        e = e + 1;
+        e        = e + 1;
       }
     }
   }
   nekbone_assert(e == nelt, "e must equal nelt.");
 
   // Allocate memory for the global numbering of the dofs.
-  const ulong ndof = nekbone_get_local_dofs(nekbone);
-  slong *glo_num = nekbone_calloc(slong, ndof);
+  const ulong ndof    = nekbone_get_local_dofs(nekbone);
+  slong      *glo_num = nekbone_calloc(slong, ndof);
 
   // Number the dofs based on the element location in x, y and z and the
   // polynomial order.
   const uint nx1 = nekbone->nx1, p = nx1 - 1;
   for (uint e = 0; e < nelt; e++) {
     const uint eg = lglel[e];
-    uint ez = 1 + (eg - 1) / nelxy;
-    uint ex = (eg + nelx - 1) % nelx + 1;
-    uint ey = (eg + nelxy - 1) % nelxy + 1;
-    ey = 1 + (ey - 1) / nelx;
+    uint       ez = 1 + (eg - 1) / nelxy;
+    uint       ex = (eg + nelx - 1) % nelx + 1;
+    uint       ey = (eg + nelxy - 1) % nelxy + 1;
+    ey            = 1 + (ey - 1) / nelx;
     ex--, ey--, ez--;
     for (uint k = 0; k < nx1; k++) {
       for (uint j = 0; j < nx1; j++) {
@@ -101,7 +101,7 @@ void nekbone_gs_setup(struct nekbone_t *nekbone) {
   // repeated
   struct dof_t *dofs = nekbone_calloc(struct dof_t, ndof);
   for (uint d = 0; d < ndof; d++) {
-    dofs[d].id = glo_num[d];
+    dofs[d].id  = glo_num[d];
     dofs[d].idx = d;
   }
 
@@ -115,7 +115,7 @@ void nekbone_gs_setup(struct nekbone_t *nekbone) {
     }
   }
 
-  nekbone->gs_n = gs_n;
+  nekbone->gs_n   = gs_n;
   nekbone->gs_off = nekbone_calloc(uint, nekbone->gs_n + 1);
   nekbone->gs_idx = nekbone_calloc(uint, rdof);
 
@@ -159,8 +159,8 @@ void nekbone_read_zwgll(struct nekbone_t *nekbone) {
   FILE *fp = fopen("data/zwgll.dat", "r");
   if (!fp) nekbone_error("nekbone_read_zwgll: zwgll.dat not found.\n");
 
-  size_t offset = 0;
-  const uint nx1 = nekbone->nx1;
+  size_t     offset = 0;
+  const uint nx1    = nekbone->nx1;
   for (uint lines = 2; lines < nx1; lines++) offset += lines;
 
   char buf[BUFSIZ];
@@ -185,8 +185,8 @@ void nekbone_geom_setup(struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_geom_setup: ...\n");
 
   const uint nx1 = nekbone->nx1, nelt = nekbone->nelt;
-  uint dof = 0;
-  nekbone->g = nekbone_calloc(scalar, 6 * nekbone_get_local_dofs(nekbone));
+  uint       dof = 0;
+  nekbone->g     = nekbone_calloc(scalar, 6 * nekbone_get_local_dofs(nekbone));
   for (uint e = 0; e < nelt; e++) {
     for (uint i = 0; i < nx1; i++) {
       for (uint j = 0; j < nx1; j++) {
@@ -210,9 +210,9 @@ void nekbone_geom_setup(struct nekbone_t *nekbone) {
 void nekbone_derivative_setup(struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_derivative_setup: ...\n");
 
-  const uint nx1 = nekbone->nx1;
-  const scalar *z = nekbone->z;
-  scalar *a = nekbone_calloc(scalar, nx1);
+  const uint    nx1 = nekbone->nx1;
+  const scalar *z   = nekbone->z;
+  scalar       *a   = nekbone_calloc(scalar, nx1);
   for (uint i = 0; i < nx1; i++) {
     a[i] = 1;
     for (uint j = 0; j < i; j++) a[i] = a[i] * (z[i] - z[j]);
@@ -235,7 +235,7 @@ void nekbone_derivative_setup(struct nekbone_t *nekbone) {
 
   for (uint i = 0; i < nx1; i++) {
     D[i + nx1 * i] = 0;
-    scalar sum = 0;
+    scalar sum     = 0;
     for (uint j = 0; j < nx1; j++) sum = sum + D[i * nx1 + j];
     D[i + nx1 * i] = -sum;
   }
@@ -248,7 +248,7 @@ void nekbone_derivative_setup(struct nekbone_t *nekbone) {
 void nekbone_inverse_multiplicity_setup(struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_inverse_multiplicity_setup: ...\n");
 
-  uint ndof = nekbone_get_local_dofs(nekbone);
+  uint    ndof = nekbone_get_local_dofs(nekbone);
   scalar *c = nekbone->c = nekbone_calloc(scalar, ndof);
   for (uint i = 0; i < ndof; i++) c[i] = 1;
 

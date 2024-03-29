@@ -8,10 +8,10 @@ struct nekbone_backend_t {
   void (*finalize)(void);
 };
 
-static struct nekbone_backend_t **backends = NULL;
-static uint backends_count = 0;
-static uint backends_capacity = 0;
-static int backend_active = -1;
+static struct nekbone_backend_t **backends          = NULL;
+static uint                       backends_count    = 0;
+static uint                       backends_capacity = 0;
+static int                        backend_active    = -1;
 
 void nekbone_register_backend(const char *name,
                               void (*initialize)(const struct nekbone_t *),
@@ -22,9 +22,9 @@ void nekbone_register_backend(const char *name,
       nekbone_calloc(struct nekbone_backend_t, 1);
   strncpy(backend->name, name, BUFSIZ);
   backend->name[BUFSIZ] = '\0';
-  backend->initialize = initialize;
-  backend->run = run;
-  backend->finalize = finalize;
+  backend->initialize   = initialize;
+  backend->run          = run;
+  backend->finalize     = finalize;
   // HASH_ADD_STR(backends, name, backend);
 
   if (backends_count == backends_capacity) {

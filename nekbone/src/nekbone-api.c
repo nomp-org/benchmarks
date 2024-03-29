@@ -44,8 +44,8 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
       {0, 0, 0, 0}};
 
   // Default values for optional arguments.
-  nekbone->verbose = NEKBONE_VERBOSE;
-  nekbone->device = NEKBONE_DEVICE;
+  nekbone->verbose  = NEKBONE_VERBOSE;
+  nekbone->device   = NEKBONE_DEVICE;
   nekbone->platform = NEKBONE_PLATFORM;
   nekbone->max_iter = NEKBONE_MAX_ITER;
 
@@ -161,10 +161,10 @@ double nekbone_run(const struct nekbone_t *nekbone) {
 
   // Set RHS for the solver.
   const uint ldofs = nekbone_get_local_dofs(nekbone);
-  scalar *r = nekbone_calloc(scalar, ldofs);
+  scalar    *r     = nekbone_calloc(scalar, ldofs);
   for (uint i = 1; i <= ldofs; i++) {
     double arg = 1e9 * i * i;
-    r[i - 1] = sin(1e9 * cos(arg));
+    r[i - 1]   = sin(1e9 * cos(arg));
   }
 
   // dssum

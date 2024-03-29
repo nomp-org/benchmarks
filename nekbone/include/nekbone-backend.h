@@ -27,7 +27,7 @@ NEKBONE_INTERN void nekbone_register_backends(int verbose);
 NEKBONE_INTERN void nekbone_init_backend(const struct nekbone_t *nekbone);
 
 NEKBONE_INTERN scalar nekbone_run_backend(const struct nekbone_t *nekbone,
-                                          const scalar *rhs);
+                                          const scalar           *rhs);
 
 // Un-register GPU backends.
 NEKBONE_INTERN void nekbone_unregister_backends(void);

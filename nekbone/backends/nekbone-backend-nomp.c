@@ -2,10 +2,10 @@
 
 static uint initialized = 0;
 
-static scalar *r, *x, *z, *p, *w;
-scalar *wrk;
+static scalar       *r, *x, *z, *p, *w;
+scalar              *wrk;
 static const scalar *c, *g, *D;
-static const uint *gs_off, *gs_idx;
+static const uint   *gs_off, *gs_idx;
 // FIXME: This doesn't work with nompcc: static scalar *ur, *us, *ut;
 static uint dofs, nelt, nx1, gs_n;
 
@@ -17,24 +17,24 @@ static void mem_init(const struct nekbone_t *nekbone) {
   // Techinically we don't need the host arrays if we always run on the device.
   // But in the case nomp is not enabled, we need these arrays on host.
   dofs = nekbone_get_local_dofs(nekbone);
-  r = nekbone_calloc(scalar, dofs);
-  x = nekbone_calloc(scalar, dofs);
-  z = nekbone_calloc(scalar, dofs);
-  p = nekbone_calloc(scalar, dofs);
-  w = nekbone_calloc(scalar, dofs);
+  r    = nekbone_calloc(scalar, dofs);
+  x    = nekbone_calloc(scalar, dofs);
+  z    = nekbone_calloc(scalar, dofs);
+  p    = nekbone_calloc(scalar, dofs);
+  w    = nekbone_calloc(scalar, dofs);
 #pragma nomp update(alloc : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],    \
                         w[0, dofs])
 
   // There is no need to allcoate following arrays on host. We just copy them
   // into the device.
-  c = nekbone->c;
-  g = nekbone->g;
-  D = nekbone->D;
+  c    = nekbone->c;
+  g    = nekbone->g;
+  D    = nekbone->D;
   nelt = nekbone->nelt;
-  nx1 = nekbone->nx1;
+  nx1  = nekbone->nx1;
 #pragma nomp update(to : c[0, dofs], g[0, 6 * dofs], D[0, nx1 * nx1])
 
-  gs_n = nekbone->gs_n;
+  gs_n   = nekbone->gs_n;
   gs_off = nekbone->gs_off;
   gs_idx = nekbone->gs_idx;
 #pragma nomp update(to : gs_off[0, gs_n + 1], gs_idx[0, gs_off[gs_n]])
@@ -52,12 +52,12 @@ static void _nomp_init(const struct nekbone_t *nekbone) {
   snprintf(device, BUFSIZ, "%u", nekbone->device);
   snprintf(platform, BUFSIZ, "%u", nekbone->platform);
 
-  const int argc = 10;
-  char *argv[] = {"--nomp-device",      device,
-                  "--nomp-backend",     "hip",
-                  "--nomp-verbose",     verbose,
-                  "--nomp-platform",    platform,
-                  "--nomp-scripts-dir", NEKBONE_SCRIPTS_DIR};
+  const int argc   = 10;
+  char     *argv[] = {"--nomp-device",      device,
+                      "--nomp-backend",     "hip",
+                      "--nomp-verbose",     verbose,
+                      "--nomp-platform",    platform,
+                      "--nomp-scripts-dir", NEKBONE_SCRIPTS_DIR};
 
 #pragma nomp init(argc, argv)
 
@@ -117,7 +117,7 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 }
 
 inline static void ax(const int nelt, const int nx1,
-                      scalar w[nelt][nx1][nx1][nx1],
+                      scalar       w[nelt][nx1][nx1][nx1],
                       const scalar u[nelt][nx1][nx1][nx1],
                       const scalar G[nelt][nx1][nx1][nx1][6],
                       const scalar D[nx1][nx1]) {
@@ -191,7 +191,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
   for (uint i = 0; i < n; i++) r[i] = f[i];
 #pragma nomp update(to : r[0, n])
 
-  scalar pap = 0;
+  scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
 
   // Zero out the solution.
@@ -202,7 +202,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
 
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
-  scalar r0 = rnorm;
+  scalar r0    = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(z, r, n);
@@ -228,7 +228,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
     add2s2(r, w, -alpha, n);
 
     scalar rtr = glsc3(r, c, r, n);
-    rnorm = sqrt(rtr);
+    rnorm      = sqrt(rtr);
     nekbone_debug(nekbone->verbose, "nomp_run: iteration %d, rnorm = %e\n", i,
                   rnorm);
   }

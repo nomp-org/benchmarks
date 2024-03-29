@@ -242,9 +242,9 @@ static const char *ax_knl_src =
     "}                                                                     \n";
 
 // OpenCL device, context, queue and program.
-static cl_device_id ocl_device;
+static cl_device_id     ocl_device;
 static cl_command_queue ocl_queue;
-static cl_context ocl_ctx;
+static cl_context       ocl_ctx;
 
 static void opencl_device_init(const struct nekbone_t *nekbone) {
   // Setup OpenCL platform.
@@ -288,10 +288,10 @@ static void opencl_device_init(const struct nekbone_t *nekbone) {
 }
 
 // OpenCL device buffers.
-static cl_mem r_mem, x_mem, z_mem, p_mem, w_mem;
-static cl_mem c_mem, g_mem, D_mem;
-static cl_mem gs_off_mem, gs_idx_mem;
-static cl_mem wrk_mem;
+static cl_mem  r_mem, x_mem, z_mem, p_mem, w_mem;
+static cl_mem  c_mem, g_mem, D_mem;
+static cl_mem  gs_off_mem, gs_idx_mem;
+static cl_mem  wrk_mem;
 static scalar *wrk;
 
 static void opencl_mem_init(const struct nekbone_t *nekbone) {
@@ -365,7 +365,7 @@ static void opencl_mem_init(const struct nekbone_t *nekbone) {
         "clEnqueueWriteBuffer(gs_idx)");
 
   // Work array.
-  wrk = nekbone_calloc(scalar, n);
+  wrk     = nekbone_calloc(scalar, n);
   wrk_mem = clCreateBuffer(ocl_ctx, CL_MEM_READ_WRITE, n * sizeof(scalar), NULL,
                            &err);
   check(err, "clCreateBuffer(wrk)");
@@ -374,10 +374,10 @@ static void opencl_mem_init(const struct nekbone_t *nekbone) {
 }
 
 // OpenCL kernels.
-static cl_program ocl_program;
-static cl_kernel mask_kernel, zero_kernel, copy_kernel;
-static cl_kernel glsc3_kernel, add2s1_kernel, add2s2_kernel;
-static cl_kernel ax_kernel, gs_kernel;
+static cl_program   ocl_program;
+static cl_kernel    mask_kernel, zero_kernel, copy_kernel;
+static cl_kernel    glsc3_kernel, add2s1_kernel, add2s2_kernel;
+static cl_kernel    ax_kernel, gs_kernel;
 static const size_t local_size = 32;
 
 static void opencl_kernels_init(const uint verbose) {
@@ -475,7 +475,7 @@ static scalar glsc3(cl_mem *a, cl_mem *b, cl_mem *c, const uint n) {
   check(clSetKernelArg(glsc3_kernel, 5, sizeof(uint), &n),
         "clSetKernelArg(glsc3, 5)");
 
-  const size_t block_size = (n + local_size - 1) / local_size;
+  const size_t block_size  = (n + local_size - 1) / local_size;
   const size_t global_size = block_size * local_size;
   check(clEnqueueNDRangeKernel(ocl_queue, glsc3_kernel, 1, NULL, &global_size,
                                &local_size, 0, NULL, NULL),
@@ -556,7 +556,7 @@ static void ax(cl_mem *w, cl_mem *p, cl_mem *g, cl_mem *D, const uint nelt,
   check(clSetKernelArg(ax_kernel, 5, shared_size, NULL),
         "clSetKernelArg(ax, 6)");
 
-  const size_t local_work[3] = {nx1, nx1, nx1};
+  const size_t local_work[3]  = {nx1, nx1, nx1};
   const size_t global_work[3] = {nelt * nx1, nx1, nx1};
   check(clEnqueueNDRangeKernel(ocl_queue, ax_kernel, 3, NULL, global_work,
                                local_work, 0, NULL, NULL),
@@ -610,7 +610,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
                              r, 0, NULL, NULL),
         "clEnqueueWriteBuffer(r)");
 
-  scalar pap = 0;
+  scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
 
   // Zero out the solution.
@@ -621,7 +621,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
 
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n));
-  scalar r0 = rnorm;
+  scalar r0    = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(&z_mem, &r_mem, n);
@@ -645,7 +645,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(&r_mem, &w_mem, -alpha, n);
 
     scalar rtr = glsc3(&r_mem, &c_mem, &r_mem, n);
-    rnorm = sqrt(rtr);
+    rnorm      = sqrt(rtr);
     nekbone_debug(nekbone->verbose, "opencl_run: iteration %d, rnorm = %e\n", i,
                   rnorm);
   }
