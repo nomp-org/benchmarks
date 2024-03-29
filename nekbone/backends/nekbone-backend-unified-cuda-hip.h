@@ -77,10 +77,10 @@ inline static scalar glsc3(const scalar *d_a, const scalar *d_b,
   const size_t global_size = (n + local_size - 1) / local_size;
   glsc3_kernel<<<global_size, local_size, local_size * sizeof(scalar)>>>(
       d_wrk, d_a, d_b, d_c, n);
-  check_driver(unified_device_synchronize());
+  check_runtime(unified_device_synchronize());
 
-  check_driver(unified_memcpy(wrk, d_wrk, global_size * sizeof(scalar),
-                              unified_memcpy_device_to_host));
+  check_runtime(unified_memcpy(wrk, d_wrk, global_size * sizeof(scalar),
+                               unified_memcpy_device_to_host));
   for (uint i = 1; i < global_size; i++) wrk[0] += wrk[i];
 
   return wrk[0];
@@ -244,11 +244,11 @@ static const char ax_kernel_template[] =
     "  w[ebase + NEKBONE_IDX3(i, j, k)] = wo;\n"
     "}\n";
 
-static unified_rtc_module_t   module                 = NULL;
-static unified_rtc_function_t function               = NULL;
-static size_t                 global[3]              = {0};
-static size_t                 local[3]               = {0};
-static int                    ax_dynamic_initialized = 0;
+static unified_module_t   module                 = NULL;
+static unified_function_t function               = NULL;
+static size_t             global[3]              = {0};
+static size_t             local[3]               = {0};
+static int                ax_dynamic_initialized = 0;
 
 inline static void ax_dynamic_setup(const int nelt, const int nx1) {
   if (ax_dynamic_initialized) return;
@@ -275,9 +275,8 @@ inline static void ax_dynamic_setup(const int nelt, const int nx1) {
   check_rtc(unified_rtc_get_code(program, code));
   check_rtc(unified_rtc_destroy_program(&program));
 
-  check_runtime(unified_rtc_module_load_data(&module, code));
-  check_runtime(
-      unified_rtc_module_get_function(&function, module, "ax_kernel"));
+  check_runtime(unified_module_load_data(&module, code));
+  check_runtime(unified_module_get_function(&function, module, "ax_kernel"));
   nekbone_free(&code);
 
   global[0] = nelt, global[1] = 1, global[2] = 1;
@@ -309,13 +308,13 @@ inline static void ax_dynamic(scalar *d_w, const scalar *d_u, const scalar *d_g,
                               const uint nx1) {
   void *args[] = {(void *)&d_w, (void *)&d_u, (void *)&d_g, (void *)&d_D, 0};
 
-  check_runtime(unified_rtc_module_launch_kernel(
-      function, global[0], global[1], global[2], local[0], local[1], local[2],
-      0, NULL, args, NULL));
+  check_runtime(unified_module_launch_kernel(function, global[0], global[1],
+                                             global[2], local[0], local[1],
+                                             local[2], 0, NULL, args, NULL));
 }
 
 inline static void ax_dynamic_finalize() {
   if (!ax_dynamic_initialized) return;
-  unified_rtc_module_unload(module);
+  unified_module_unload(module);
   ax_dynamic_initialized = 0;
 }

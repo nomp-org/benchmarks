@@ -14,9 +14,9 @@ static uint initialized = 0;
     }                                                                          \
   }
 
-#define check_driver(call)                                                     \
+#define check_runtime(call)                                                    \
   check_error(__FILE__, __LINE__, call, hipError_t, hipSuccess,                \
-              hipGetErrorName, "driver")
+              hipGetErrorName, "runtime")
 
 static scalar      *d_r, *d_x, *d_z, *d_p, *d_w;
 static scalar      *d_wrk, *wrk;
@@ -31,44 +31,44 @@ static void hip_mem_init(const struct nekbone_t *nekbone) {
   const uint n = nekbone_get_local_dofs(nekbone);
 
   // Allocate device buffers and copy problem data to device.
-  check_driver(hipMalloc((void **)&d_r, n * sizeof(scalar)));
-  check_driver(hipMalloc((void **)&d_x, n * sizeof(scalar)));
-  check_driver(hipMalloc((void **)&d_z, n * sizeof(scalar)));
-  check_driver(hipMalloc((void **)&d_p, n * sizeof(scalar)));
-  check_driver(hipMalloc((void **)&d_w, n * sizeof(scalar)));
+  check_runtime(hipMalloc((void **)&d_r, n * sizeof(scalar)));
+  check_runtime(hipMalloc((void **)&d_x, n * sizeof(scalar)));
+  check_runtime(hipMalloc((void **)&d_z, n * sizeof(scalar)));
+  check_runtime(hipMalloc((void **)&d_p, n * sizeof(scalar)));
+  check_runtime(hipMalloc((void **)&d_w, n * sizeof(scalar)));
 
   // Copy multiplicity array.
-  check_driver(hipMalloc((void **)&d_c, n * sizeof(scalar)));
-  check_driver(
+  check_runtime(hipMalloc((void **)&d_c, n * sizeof(scalar)));
+  check_runtime(
       hipMemcpy(d_c, nekbone->c, n * sizeof(scalar), hipMemcpyHostToDevice));
 
   // Copy geometric factors and derivative matrix.
-  check_driver(hipMalloc((void **)&d_g, 6 * n * sizeof(scalar)));
-  check_driver(hipMemcpy(d_g, nekbone->g, 6 * n * sizeof(scalar),
-                         hipMemcpyHostToDevice));
+  check_runtime(hipMalloc((void **)&d_g, 6 * n * sizeof(scalar)));
+  check_runtime(hipMemcpy(d_g, nekbone->g, 6 * n * sizeof(scalar),
+                          hipMemcpyHostToDevice));
 
-  check_driver(
+  check_runtime(
       hipMalloc((void **)&d_D, nekbone->nx1 * nekbone->nx1 * sizeof(scalar)));
-  check_driver(hipMemcpy(d_D, nekbone->D,
-                         nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
-                         hipMemcpyHostToDevice));
+  check_runtime(hipMemcpy(d_D, nekbone->D,
+                          nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
+                          hipMemcpyHostToDevice));
 
   // Copy gather-scatter offsets and indices.
-  check_driver(
+  check_runtime(
       hipMalloc((void **)&d_gs_off, (nekbone->gs_n + 1) * sizeof(uint)));
-  check_driver(hipMemcpy(d_gs_off, nekbone->gs_off,
-                         (nekbone->gs_n + 1) * sizeof(uint),
-                         hipMemcpyHostToDevice));
+  check_runtime(hipMemcpy(d_gs_off, nekbone->gs_off,
+                          (nekbone->gs_n + 1) * sizeof(uint),
+                          hipMemcpyHostToDevice));
 
-  check_driver(hipMalloc((void **)&d_gs_idx,
-                         nekbone->gs_off[nekbone->gs_n] * sizeof(uint)));
-  check_driver(hipMemcpy(d_gs_idx, nekbone->gs_idx,
-                         nekbone->gs_off[nekbone->gs_n] * sizeof(uint),
-                         hipMemcpyHostToDevice));
+  check_runtime(hipMalloc((void **)&d_gs_idx,
+                          nekbone->gs_off[nekbone->gs_n] * sizeof(uint)));
+  check_runtime(hipMemcpy(d_gs_idx, nekbone->gs_idx,
+                          nekbone->gs_off[nekbone->gs_n] * sizeof(uint),
+                          hipMemcpyHostToDevice));
 
   // Work array.
   wrk = nekbone_calloc(scalar, n);
-  check_driver(hipMalloc((void **)&d_wrk, n * sizeof(scalar)));
+  check_runtime(hipMalloc((void **)&d_wrk, n * sizeof(scalar)));
 
   nekbone_debug(nekbone->verbose, "done.\n");
 }
@@ -88,32 +88,18 @@ static void hip_mem_init(const struct nekbone_t *nekbone) {
 #define unified_rtc_get_code             hiprtcGetCode
 #define unified_rtc_destroy_program      hiprtcDestroyProgram
 
-#define unified_rtc_module_t             hipModule_t
-#define unified_rtc_function_t           hipFunction_t
-#define unified_rtc_module_load_data     hipModuleLoadData
-#define unified_rtc_module_get_function  hipModuleGetFunction
-#define unified_rtc_module_unload        hipModuleUnload
-#define unified_rtc_module_launch_kernel hipModuleLaunchKernel
+#define unified_module_t             hipModule_t
+#define unified_function_t           hipFunction_t
+#define unified_module_load_data     hipModuleLoadData
+#define unified_module_get_function  hipModuleGetFunction
+#define unified_module_unload        hipModuleUnload
+#define unified_module_launch_kernel hipModuleLaunchKernel
 
 #define UNIFIED_RTC_SUCCESS HIPRTC_SUCCESS
 
 #define check_rtc(call)                                                        \
-  {                                                                            \
-    hiprtcResult result = (call);                                              \
-    if (result != HIPRTC_SUCCESS) {                                            \
-      const char *error = hiprtcGetErrorString(result);                        \
-      nekbone_error(error);                                                    \
-    }                                                                          \
-  }
-
-#define check_runtime(call)                                                    \
-  {                                                                            \
-    hipError_t status = (call);                                                \
-    if (status != hipSuccess) {                                                \
-      const char *error = hipGetErrorName(status);                             \
-      nekbone_error(error);                                                    \
-    }                                                                          \
-  }
+  check_error(__FILE__, __LINE__, call, hiprtcResult, HIPRTC_SUCCESS,          \
+              hiprtcGetErrorString, "runtime compilation")
 
 #include "nekbone-backend-unified-cuda-hip.h"
 
@@ -132,31 +118,30 @@ static void hip_mem_init(const struct nekbone_t *nekbone) {
 #undef unified_rtc_get_code
 #undef unified_rtc_destroy_program
 
-#undef unified_rtc_module_t
-#undef unified_rtc_function_t
-#undef unified_rtc_module_load_data
-#undef unified_rtc_module_get_function
-#undef unified_rtc_module_unload
-#undef unified_rtc_module_launch_kernel
+#undef unified_module_t
+#undef unified_function_t
+#undef unified_module_load_data
+#undef unified_module_get_function
+#undef unified_module_unload
+#undef unified_module_launch_kernel
 
 #undef UNIFIED_RTC_SUCCESS
 
 #undef check_rtc
-#undef check_runtime
 
 static void hip_init(const struct nekbone_t *nekbone) {
   if (initialized) return;
   nekbone_debug(nekbone->verbose, "hip_init: initializing hip backend ...\n");
 
   int num_devices = 0;
-  check_driver(hipGetDeviceCount(&num_devices));
+  check_runtime(hipGetDeviceCount(&num_devices));
   if (nekbone->device >= (uint)num_devices) {
     nekbone_error("hip_init: Invalid device id %d, only %d devices available.",
                   nekbone->device, num_devices);
   }
 
-  check_driver(hipSetDeviceFlags(hipDeviceMapHost));
-  check_driver(hipFree(0));
+  check_runtime(hipSetDeviceFlags(hipDeviceMapHost));
+  check_runtime(hipFree(0));
 
   hip_mem_init(nekbone);
 
@@ -175,7 +160,7 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
-  check_driver(hipMemcpy(d_r, r, n * sizeof(scalar), hipMemcpyHostToDevice));
+  check_runtime(hipMemcpy(d_r, r, n * sizeof(scalar), hipMemcpyHostToDevice));
 
   scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
@@ -215,7 +200,7 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
     nekbone_debug(nekbone->verbose, "hip_run: iteration %d, rnorm = %e\n", i,
                   rnorm);
   }
-  check_driver(hipDeviceSynchronize());
+  check_runtime(hipDeviceSynchronize());
   clock_t t1 = clock() - t0;
 
   ax_dynamic_finalize();
@@ -231,17 +216,17 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
 static void hip_finalize(void) {
   if (!initialized) return;
 
-  check_driver(hipFree(d_r));
-  check_driver(hipFree(d_x));
-  check_driver(hipFree(d_z));
-  check_driver(hipFree(d_p));
-  check_driver(hipFree(d_w));
-  check_driver(hipFree(d_c));
-  check_driver(hipFree(d_g));
-  check_driver(hipFree(d_D));
-  check_driver(hipFree(d_gs_off));
-  check_driver(hipFree(d_gs_idx));
-  check_driver(hipFree(d_wrk));
+  check_runtime(hipFree(d_r));
+  check_runtime(hipFree(d_x));
+  check_runtime(hipFree(d_z));
+  check_runtime(hipFree(d_p));
+  check_runtime(hipFree(d_w));
+  check_runtime(hipFree(d_c));
+  check_runtime(hipFree(d_g));
+  check_runtime(hipFree(d_D));
+  check_runtime(hipFree(d_gs_off));
+  check_runtime(hipFree(d_gs_idx));
+  check_runtime(hipFree(d_wrk));
 
   nekbone_free(&wrk);
 
