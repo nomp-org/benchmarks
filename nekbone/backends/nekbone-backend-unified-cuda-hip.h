@@ -177,7 +177,7 @@ inline static void ax_static(scalar *d_w, const scalar *d_u, const scalar *d_g,
   }
 }
 
-static const char ax_kernel_template[] =
+static const char *ax_kernel_v00 =
     "#define NX1 %d\n"
     "#define scalar double\n"
     "#define uint unsigned\n"
@@ -244,24 +244,104 @@ static const char ax_kernel_template[] =
     "  w[ebase + NEKBONE_IDX3(i, j, k)] = wo;\n"
     "}\n";
 
-static unified_module_t   module                 = NULL;
-static unified_function_t function               = NULL;
-static size_t             global[3]              = {0};
-static size_t             local[3]               = {0};
+static const char *ax_kernel_v01 =
+    "#define bIdx(N) ((int) blockIdx.N)\n"
+    "#define tIdx(N) ((int) threadIdx.N)\n"
+    "\n"
+    "extern \"C\" __global__ void __launch_bounds__(512) ax_kernel("
+    "double *__restrict__ w, double const *__restrict__ u, double "
+    "const *__restrict__ G, double const *__restrict__ D)\n"
+    "{\n"
+    "  __shared__ double D_fetch[8 * 8];\n"
+    "  double r_G00;\n"
+    "  double r_G01;\n"
+    "  double r_G02;\n"
+    "  double r_G11;\n"
+    "  double r_G12;\n"
+    "  double r_G22;\n"
+    "  __shared__ double ur[8 * 8 * 8];\n"
+    "  __shared__ double us[8 * 8 * 8];\n"
+    "  __shared__ double ut[8 * 8 * 8];\n"
+    "  double wo;\n"
+    "  double wr;\n"
+    "  double ws;\n"
+    "  double wt;\n"
+    "\n"
+    "  ur[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = 0;\n"
+    "  if (tIdx(y) == 0)\n"
+    "    D_fetch[8 * tIdx(x) + tIdx(z)] = D[8 * tIdx(x) + tIdx(z)];\n"
+    "  us[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = 0;\n"
+    "  ut[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = 0;\n"
+    "  __syncthreads() /* for D_fetch (_nomp_insn_4 depends on D_fetch_rule) "
+    "*/;\n"
+    "  for (int l = 0; l <= 7; ++l)\n"
+    "  {\n"
+    "    ur[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = ur[64 * tIdx(z) + 8 * "
+    "tIdx(y) + tIdx(x)] + D_fetch[8 * tIdx(x) + l] * u[512 * bIdx(x) + 64 * "
+    "tIdx(z) + 8 * tIdx(y) + l];\n"
+    "    us[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = us[64 * tIdx(z) + 8 * "
+    "tIdx(y) + tIdx(x)] + D_fetch[8 * tIdx(y) + l] * u[512 * bIdx(x) + 64 * "
+    "tIdx(z) + 8 * l + tIdx(x)];\n"
+    "    ut[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = ut[64 * tIdx(z) + 8 * "
+    "tIdx(y) + tIdx(x)] + D_fetch[8 * tIdx(z) + l] * u[512 * bIdx(x) + 64 * l "
+    "+ 8 * tIdx(y) + tIdx(x)];\n"
+    "  }\n"
+    "  r_G00 = G[3072 * bIdx(x) + 384 * tIdx(z) + 48 * tIdx(y) + 6 * "
+    "tIdx(x)];\n"
+    "  r_G01 = G[3072 * bIdx(x) + 384 * tIdx(z) + 48 * tIdx(y) + 6 * tIdx(x) + "
+    "1];\n"
+    "  r_G02 = G[3072 * bIdx(x) + 384 * tIdx(z) + 48 * tIdx(y) + 6 * tIdx(x) + "
+    "2];\n"
+    "  r_G11 = G[3072 * bIdx(x) + 384 * tIdx(z) + 48 * tIdx(y) + 6 * tIdx(x) + "
+    "3];\n"
+    "  r_G12 = G[3072 * bIdx(x) + 384 * tIdx(z) + 48 * tIdx(y) + 6 * tIdx(x) + "
+    "4];\n"
+    "  r_G22 = G[3072 * bIdx(x) + 384 * tIdx(z) + 48 * tIdx(y) + 6 * tIdx(x) + "
+    "5];\n"
+    "  __syncthreads() /* for ur (_nomp_insn_11 depends on _nomp_insn_2) */;\n"
+    "  wr = r_G00 * ur[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] + r_G01 * us[64 * "
+    "tIdx(z) + 8 * tIdx(y) + tIdx(x)] + r_G02 * ut[64 * tIdx(z) + 8 * tIdx(y) "
+    "+ tIdx(x)];\n"
+    "  ws = r_G01 * ur[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] + r_G11 * us[64 * "
+    "tIdx(z) + 8 * tIdx(y) + tIdx(x)] + r_G12 * ut[64 * tIdx(z) + 8 * tIdx(y) "
+    "+ tIdx(x)];\n"
+    "  wt = r_G02 * ur[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] + r_G12 * us[64 * "
+    "tIdx(z) + 8 * tIdx(y) + tIdx(x)] + r_G22 * ut[64 * tIdx(z) + 8 * tIdx(y) "
+    "+ tIdx(x)];\n"
+    "  __syncthreads() /* for ur (_nomp_insn_14 depends on _nomp_insn_11) */;\n"
+    "  ur[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = wr;\n"
+    "  us[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = ws;\n"
+    "  ut[64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = wt;\n"
+    "  wo = 0;\n"
+    "  __syncthreads() /* for ur (_nomp_insn_18 depends on _nomp_insn_14) */;\n"
+    "  for (int l_ = 0; l_ <= 7; ++l_)\n"
+    "    wo = wo + D_fetch[8 * l_ + tIdx(x)] * ur[64 * tIdx(z) + 8 * tIdx(y) + "
+    "l_] + D_fetch[8 * l_ + tIdx(y)] * us[64 * tIdx(z) + 8 * l_ + tIdx(x)] + "
+    "D_fetch[8 * l_ + tIdx(z)] * ut[64 * l_ + 8 * tIdx(y) + tIdx(x)];\n"
+    "  w[512 * bIdx(x) + 64 * tIdx(z) + 8 * tIdx(y) + tIdx(x)] = wo;\n"
+    "}\n";
+
+static const char        *ax_kernel_template[] = {ax_kernel_v00, ax_kernel_v01};
+static unified_module_t   module               = NULL;
+static unified_function_t function             = NULL;
+static size_t             global[3]            = {0};
+static size_t             local[3]             = {0};
 static int                ax_dynamic_initialized = 0;
 
 inline static void ax_dynamic_setup(const int nelt, const int nx1) {
   if (ax_dynamic_initialized) return;
 
-  size_t length    = sizeof(ax_kernel_template) + 100;
-  char  *ax_kernel = nekbone_calloc(char, length);
-  snprintf(ax_kernel, length, ax_kernel_template, nx1);
+  int    template_id = (nx1 == 8) ? 1 : 0;
+  size_t length      = strlen(ax_kernel_template[template_id]) + 100;
+  char  *ax_kernel   = nekbone_calloc(char, length);
+  if (template_id == 0)
+    snprintf(ax_kernel, length, ax_kernel_template[template_id], nx1);
+  if (template_id == 1)
+    strncpy(ax_kernel, ax_kernel_template[template_id], length);
 
   unified_rtc_program program;
   check_rtc(
       unified_rtc_create_program(&program, ax_kernel, NULL, 0, NULL, NULL));
-  fprintf(stdout, "ax_kernel =\n%s\n", ax_kernel);
-  fflush(stdout);
   nekbone_free(&ax_kernel);
 
   char *code = NULL;
