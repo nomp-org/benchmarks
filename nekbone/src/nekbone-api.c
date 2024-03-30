@@ -109,8 +109,6 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
   // end of the program.
   for (int i = optind; i < *argc; i++) argv[i - optind] = argv[i];
   *argc -= optind;
-
-  return;
 }
 
 struct nekbone_t *nekbone_init(int *argc, char ***argv) {

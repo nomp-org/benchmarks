@@ -3,8 +3,7 @@ project(nekbone VERSION 0.0.1 DESCRIPTION "" LANGUAGES C)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${CMAKE_INSTALL_PREFIX}/lib64")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
 
@@ -14,6 +13,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 option(ENABLE_OPENCL "Build OPENCL backend" OFF)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
 option(ENABLE_HIP "Build HIP backend" OFF)
+option(ENABLE_NOMP "Build NOMP backend" OFF)
 
 # Build defaults:
 set(NEKBONE_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/backends/)
@@ -47,15 +47,14 @@ if (ENABLE_CUDA)
   endif()
 endif()
 
-set_source_files_properties(${SOURCE} PROPERTIES C_STANDARD 11)
-set_source_files_properties(${SOURCE} PROPERTIES C_STANDARD_REQUIRED ON)
-
 if (ENABLE_HIP)
   set_source_files_properties(backends/nekbone-backend-hip.c
     PROPERTIES COMPILE_FLAGS "-x hip")
   list(APPEND SOURCES backends/nekbone-backend-hip.c)
 endif()
 
+set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
+  C_STANDARD_REQUIRED ON)
 
 add_library(nekbone SHARED ${SOURCES})
 set_target_properties(nekbone PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
@@ -67,13 +66,30 @@ target_compile_options(nekbone PRIVATE
 # Add -Wpedantic if compiler is not MSVC and language CUDA is not enabled.
 target_compile_options(nekbone PRIVATE
   $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:-Wpedantic>)
+# Add flags from the user.
+target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
 target_link_libraries(nekbone PRIVATE m)
 
 if (ENABLE_OPENCL)
   target_link_libraries(nekbone PRIVATE OpenCL::OpenCL)
 endif()
+
 if (ENABLE_CUDA)
   target_link_libraries(nekbone PRIVATE CUDA::cudart CUDA::nvrtc)
+endif()
+
+# TODO: Find HIP at runtime.
+#if (ENABLE_HIP)
+#endif()
+
+if (ENABLE_NOMP)
+  if (NOT DEFINED ENV{NOMP_INSTALL_DIR})
+    message(FATAL_ERROR "ENABLE_NOMP is ON but NOMP_INSTALL_DIR is not set.")
+  endif()
+  target_compile_options(nekbone PRIVATE -fnomp -I$ENV{NOMP_INSTALL_DIR}/include -include nomp.h)
+  target_link_options(nekbone PRIVATE -Wl,-rpath,$ENV{NOMP_INSTALL_DIR}/lib -L$ENV{NOMP_INSTALL_DIR}/lib -lnomp)
+else()
+  target_compile_options(nekbone PRIVATE -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-variable)
 endif()
 
 add_executable(nekbone-driver bin/nekbone-driver.c)

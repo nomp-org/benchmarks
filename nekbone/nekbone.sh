@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# ./nekbone.sh --enable-backend nomp --cc ~/.nomp/clang/bin/clang
+# ./scrips/frontier.sh nomp 7 100 1:00:00
+#
+# ./nekbone.sh --enable-backend hip --cc hipcc
+# ./scrips/frontier.sh hip 7 100 1:00:00
+
 function print_help() {
   echo "Usage: $0 [options]"
   echo "Options:"
@@ -12,12 +18,12 @@ function print_help() {
   echo "  --enable-backend <backend> Set backend to be used for the build."
 }
 
-: ${NEKBONE_CC:=}
-: ${NEKBONE_CFLAGS:=-O3}
+: ${NEKBONE_CC:=cc}
+: ${NEKBONE_CFLAGS:=""}
 : ${NEKBONE_BUILD_TYPE:=RelWithDebInfo}
 : ${NEKBONE_BUILD_DIR:=`pwd`/build}
 : ${NEKBONE_INSTALL_PREFIX:=`pwd`/install}
-: ${NEKBONE_LIB_SUFFIX:=".so"}
+: ${NEKBONE_LIB_SUFFIX:=.so}
 : ${NEKBONE_OPENCL:=OFF}
 : ${NEKBONE_OPENCL_INC_DIR:=${CONDA_PREFIX}/include}
 : ${NEKBONE_OPENCL_LIB_DIR:=${CONDA_PREFIX}/lib/libOpenCL${NEKBONE_LIB_SUFFIX}}
@@ -101,59 +107,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 ### Don't touch anything that follows this line. ###
-if [[ -z "${NEKBONE_CC}" ]]; then
-  echo "Error: NEKBONE_CC is not set."
-  exit 1
-fi
-export CC=${NEKBONE_CC}
+cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} \
+  -DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE} \
+  -DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX} \
+  -DCMAKE_C_COMPILER=${NEKBONE_CC} \
+  -DCMAKE_C_FLAGS=${NEKBONE_CFLAGS} \
+  -DENABLE_OPENCL=${NEKBONE_OPENCL} \
+  -DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR} \
+  -DOpenCL_LIBRARY=${NEKBONE_OPENCL_LIB_DIR} \
+  -DENABLE_CUDA=${NEKBONE_CUDA} \
+  -DENABLE_HIP=${NEKBONE_HIP} \
+  -DENABLE_NOMP=${NEKBONE_NOMP}
 
-if [[ "${NEKBONE_NOMP}" ==  "ON" ]]; then
-  if [[ -z "${NOMP_INSTALL_DIR}" ]]; then
-    echo "Error: NOMP_INSTALL_DIR is not defined."
-    exit 1
-  else
-    export NOMP_INC_DIR=${NOMP_INSTALL_DIR}/include
-    NEKBONE_CFLAGS="-O3 -fnomp -I${NOMP_INC_DIR} -include nomp.h"
-
-    export NOMP_LIB_DIR=${NOMP_INSTALL_DIR}/lib
-    export LDFLAGS="-Wl,-rpath,${NOMP_LIB_DIR} -L${NOMP_LIB_DIR} -lnomp"
-
-    #FIXME: symengine needs libstdc++ from conda.
-    export LDFLAGS="${LDFLAGS} -Wl,-rpath,${CONDA_PREFIX}/lib -L${CONDA_PREFIX}/lib -lstdc++"
-  fi
-fi
-
-NEKBONE_CFLAGS="${NEKBONE_CFLAGS} -Wno-unknown-pragmas"
-export CFLAGS="${NEKBONE_CFLAGS}"
-
-NEKBONE_CMAKE_CMD="-DENABLE_OPENCL=${NEKBONE_OPENCL} -DENABLE_CUDA=${NEKBONE_CUDA}"
-NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DENABLE_HIP=${NEKBONE_HIP}"
-
-if [[ ${NEKBONE_OPENCL} == "ON" ]]; then
-  if [[ ! -z ${NEKBONE_OPENCL_INC_DIR} ]]; then
-    NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR}"
-  fi
-  if [[ ! -z ${NEKBONE_OPENCL_INC_DIR} ]]; then
-    NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DOpenCL_LIBRARY=${NEKBONE_OPENCL_LIB_DIR}"
-  fi
-fi
-
-if [[ -z "${NEKBONE_BUILD_DIR}" ]]; then
-  echo "Error: NEKBONE_BUILD_DIR is not set."
-  exit 1
-fi
-NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -B ${NEKBONE_BUILD_DIR}"
-mkdir -p ${NEKBONE_BUILD_DIR} 2> /dev/null
-
-if [[ ! -z "${NEKBONE_BUILD_TYPE}" ]]; then
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE}"
-fi
-if [[ ! -z "${NEKBONE_INSTALL_PREFIX}" ]]; then
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX}"
-fi
-
-NEKBONE_CURRENT_DIR=`pwd`
-
-echo "cmake -S ${NEKBONE_CURRENT_DIR} ${NEKBONE_CMAKE_CMD}"
-cmake -S ${NEKBONE_CURRENT_DIR} ${NEKBONE_CMAKE_CMD}
-cmake --build ${NEKBONE_BUILD_DIR} --target install -j10
+cmake --build ${NEKBONE_BUILD_DIR} --target install -j4
