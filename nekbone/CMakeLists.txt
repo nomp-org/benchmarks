@@ -67,7 +67,6 @@ target_compile_options(nekbone PRIVATE
 target_compile_options(nekbone PRIVATE
   $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:-Wpedantic>)
 # Add flags from the user.
-target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
 target_link_libraries(nekbone PRIVATE m)
 
 if (ENABLE_OPENCL)
@@ -78,19 +77,26 @@ if (ENABLE_CUDA)
   target_link_libraries(nekbone PRIVATE CUDA::cudart CUDA::nvrtc)
 endif()
 
-# TODO: Find HIP at runtime.
-#if (ENABLE_HIP)
-#endif()
+if (ENABLE_HIP)
+  target_compile_options(nekbone PRIVATE -ffp-contract=fast
+    -funsafe-math-optimizations -ffast-math
+    --amdgpu-target=gfx90a:sramecc+:xnack-)
+endif()
 
 if (ENABLE_NOMP)
   if (NOT DEFINED ENV{NOMP_INSTALL_DIR})
     message(FATAL_ERROR "ENABLE_NOMP is ON but NOMP_INSTALL_DIR is not set.")
   endif()
-  target_compile_options(nekbone PRIVATE -fnomp -I$ENV{NOMP_INSTALL_DIR}/include -include nomp.h)
-  target_link_options(nekbone PRIVATE -Wl,-rpath,$ENV{NOMP_INSTALL_DIR}/lib -L$ENV{NOMP_INSTALL_DIR}/lib -lnomp)
+  target_compile_options(nekbone PRIVATE -fnomp -I$ENV{NOMP_INSTALL_DIR}/include 
+    -include nomp.h)
+  target_link_options(nekbone PRIVATE -Wl,-rpath,$ENV{NOMP_INSTALL_DIR}/lib
+    -L$ENV{NOMP_INSTALL_DIR}/lib -lnomp)
 else()
-  target_compile_options(nekbone PRIVATE -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-variable)
+  target_compile_options(nekbone PRIVATE -Wno-unknown-pragmas
+    -Wno-unused-parameter -Wno-unused-variable)
 endif()
+
+target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
 
 add_executable(nekbone-driver bin/nekbone-driver.c)
 set_target_properties(nekbone-driver PROPERTIES VERSION ${PROJECT_VERSION})

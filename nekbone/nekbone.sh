@@ -19,7 +19,7 @@ function print_help() {
 }
 
 : ${NEKBONE_CC:=cc}
-: ${NEKBONE_CFLAGS:=""}
+: ${NEKBONE_CFLAGS:="-O3 -g"}
 : ${NEKBONE_BUILD_TYPE:=RelWithDebInfo}
 : ${NEKBONE_BUILD_DIR:=`pwd`/build}
 : ${NEKBONE_INSTALL_PREFIX:=`pwd`/install}
