@@ -3,7 +3,7 @@
 #define bIdx(N) ((int)blockIdx.N)
 #define tIdx(N) ((int)threadIdx.N)
 
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     mask_kernel(scalar *__restrict__ v) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i == 0) v[i] = 0;
@@ -14,7 +14,7 @@ inline static void mask(scalar *d_v, const uint n) {
   mask_kernel<<<global_size, LOCAL_SIZE>>>(d_v);
 }
 
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     zero_kernel(scalar *__restrict__ v, const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i < n) v[i] = 0;
@@ -25,7 +25,7 @@ inline static void zero(scalar *d_v, const uint n) {
   zero_kernel<<<global_size, LOCAL_SIZE>>>(d_v, n);
 }
 
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     copy_kernel(scalar *__restrict__ a, const scalar *__restrict__ b,
                 const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -37,7 +37,7 @@ inline static void copy(scalar *d_a, const scalar *d_b, const uint n) {
   copy_kernel<<<global_size, LOCAL_SIZE>>>(d_a, d_b, n);
 }
 
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     add2s1_kernel(scalar *__restrict__ a, const scalar *__restrict__ b,
                   const scalar c, const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -50,7 +50,7 @@ inline static void add2s1(scalar *d_a, const scalar *d_b, const scalar c,
   add2s1_kernel<<<global_size, LOCAL_SIZE>>>(d_a, d_b, c, n);
 }
 
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     add2s2_kernel(scalar *__restrict__ a, const scalar *__restrict__ b,
                   const scalar c, const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -65,9 +65,9 @@ inline static void add2s2(scalar *d_a, const scalar *d_b, const scalar c,
 
 #if LOCAL_SIZE == 512
 __global__ void __launch_bounds__(LOCAL_SIZE)
-    glsc3_kernel_v1(double *__restrict__ wrk, double const *__restrict__ a,
-                    double const *__restrict__ b, double const *__restrict__ c,
-                    int const n) {
+    glsc3_kernel_loopy(double *__restrict__ wrk, double const *__restrict__ a,
+                       double const *__restrict__ b,
+                       double const *__restrict__ c, int const n) {
   __shared__ double acc_i_inner[512];
   double            neutral_i_inner;
   __shared__ double tmp_sum_0[512];
@@ -112,7 +112,7 @@ __global__ void __launch_bounds__(LOCAL_SIZE)
   }
 }
 #else
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     glsc3_kernel_v0(scalar *wrk, const scalar *__restrict__ a,
                     const scalar *__restrict__ b, const scalar *__restrict__ c,
                     const uint n) {
@@ -137,7 +137,7 @@ inline static scalar glsc3(const scalar *d_a, const scalar *d_b,
                            const scalar *d_c, const uint n) {
   const size_t global_size = (n + LOCAL_SIZE - 1) / LOCAL_SIZE;
 #if LOCAL_SIZE == 512
-  glsc3_kernel_v1<<<global_size, LOCAL_SIZE, LOCAL_SIZE * sizeof(scalar)>>>(
+  glsc3_kernel_loopy<<<global_size, LOCAL_SIZE, LOCAL_SIZE * sizeof(scalar)>>>(
       d_wrk, d_a, d_b, d_c, n);
 #else
   glsc3_kernel_v0<<<global_size, LOCAL_SIZE, LOCAL_SIZE * sizeof(scalar)>>>(
@@ -267,7 +267,7 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
   }
 }
 
-__global__ static void __launch_bounds__(LOCAL_SIZE)
+__global__ void __launch_bounds__(LOCAL_SIZE)
     gs_kernel(scalar *__restrict__ v, const uint *__restrict__ gs_off,
               const uint *__restrict__ gs_idx, const uint n) {
   const uint i = blockIdx.x * blockDim.x + threadIdx.x;
