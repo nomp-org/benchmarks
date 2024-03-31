@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ./nekbone.sh --enable-backend nomp --cc ~/.nomp/clang/bin/clang
-# ./scrips/frontier.sh nomp 7 100 1:00:00
+# ./scripts/frontier.sh nomp 7 100 1:00:00
 #
 # ./nekbone.sh --enable-backend hip --cc hipcc
-# ./scrips/frontier.sh hip 7 100 1:00:00
+# ./scripts/frontier.sh hip 7 100 1:00:00
 
 function print_help() {
   echo "Usage: $0 [options]"
