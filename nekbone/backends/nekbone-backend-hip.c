@@ -18,11 +18,10 @@ static uint initialized = 0;
   check_error(__FILE__, __LINE__, call, hipError_t, hipSuccess,                \
               hipGetErrorName, "runtime")
 
-static scalar      *d_r, *d_x, *d_z, *d_p, *d_w;
-static scalar      *d_wrk, *wrk;
-static scalar      *d_c, *d_g, *d_D;
-static uint        *d_gs_off, *d_gs_idx;
-static const size_t local_size = 512;
+static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
+static scalar *d_wrk, *wrk;
+static scalar *d_c, *d_g, *d_D;
+static uint   *d_gs_off, *d_gs_idx;
 
 static void hip_mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
@@ -155,8 +154,6 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
   const uint n = nekbone_get_local_dofs(nekbone);
   nekbone_debug(nekbone->verbose, "hip_run: ... n=%u\n", n);
 
-  ax_dynamic_setup(nekbone->nelt, nekbone->nx1);
-
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
@@ -183,8 +180,7 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
     if (i == 0) beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-    // ax_static(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
-    ax_dynamic(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
+    ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
     gs(d_w, d_gs_off, d_gs_idx, nekbone->gs_n);
     add2s2(d_w, d_p, 0.1, n);
     mask(d_w, n);
@@ -202,8 +198,6 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
   }
   check_runtime(hipDeviceSynchronize());
   clock_t t1 = clock() - t0;
-
-  ax_dynamic_finalize();
 
   nekbone_debug(nekbone->verbose, "hip_run: done.\n");
   nekbone_debug(nekbone->verbose, "hip_run: iterations = %d.\n",
