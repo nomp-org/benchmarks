@@ -264,12 +264,13 @@ inline static void ax(scalar *d_w, const scalar *d_u, const scalar *d_g,
 
 __global__ void __launch_bounds__(LOCAL_SIZE)
     gs_kernel(scalar *__restrict__ v, const uint *__restrict__ gs_off,
-              const uint *__restrict__ gs_idx, const uint n) {
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) {
+              const uint *__restrict__ gs_idx, const int n) {
+  if (gIdx(x) < n) {
     scalar s = 0;
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j) s += v[gs_idx[j]];
-    for (uint j = gs_off[i]; j < gs_off[i + 1]; ++j) v[gs_idx[j]] = s;
+    for (uint j = gs_off[gIdx(x)]; j < gs_off[gIdx(x) + 1]; ++j)
+      s += v[gs_idx[j]];
+    for (uint j = gs_off[gIdx(x)]; j < gs_off[gIdx(x) + 1]; ++j)
+      v[gs_idx[j]] = s;
   }
 }
 
