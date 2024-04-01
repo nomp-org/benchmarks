@@ -48,8 +48,6 @@ if (ENABLE_CUDA)
 endif()
 
 if (ENABLE_HIP)
-  set_source_files_properties(backends/nekbone-backend-hip.c
-    PROPERTIES COMPILE_FLAGS "-x hip")
   list(APPEND SOURCES backends/nekbone-backend-hip.c)
 endif()
 
@@ -78,8 +76,9 @@ if (ENABLE_CUDA)
 endif()
 
 if (ENABLE_HIP)
-  target_compile_options(nekbone PRIVATE -ffp-contract=fast
-    -funsafe-math-optimizations -ffast-math
+  set_source_files_properties(backends/nekbone-backend-hip.c
+    PROPERTIES COMPILE_FLAGS "-x hip")
+  target_compile_options(nekbone PRIVATE -ffast-math
     --amdgpu-target=gfx90a:sramecc+:xnack-)
 endif()
 
