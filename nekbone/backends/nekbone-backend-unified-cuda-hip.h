@@ -2,63 +2,59 @@
 
 #define bIdx(N) ((int)blockIdx.N)
 #define tIdx(N) ((int)threadIdx.N)
+#define gIdx(N) (bIdx(N) * LOCAL_SIZE + tIdx(N))
 
 __global__ void __launch_bounds__(LOCAL_SIZE)
     mask_kernel(scalar *__restrict__ v) {
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i == 0) v[i] = 0;
+  if (gIdx(x) == 0) v[gIdx(x)] = 0;
 }
 
-inline static void mask(scalar *d_v, const uint n) {
+inline static void mask(scalar *d_v, const int n) {
   const size_t global_size = (n + LOCAL_SIZE - 1) / LOCAL_SIZE;
   mask_kernel<<<global_size, LOCAL_SIZE>>>(d_v);
 }
 
 __global__ void __launch_bounds__(LOCAL_SIZE)
-    zero_kernel(scalar *__restrict__ v, const uint n) {
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) v[i] = 0;
+    zero_kernel(scalar *__restrict__ v, const int n) {
+  if (gIdx(x) < n) v[gIdx(x)] = 0;
 }
 
-inline static void zero(scalar *d_v, const uint n) {
+inline static void zero(scalar *d_v, const int n) {
   const size_t global_size = (n + LOCAL_SIZE - 1) / LOCAL_SIZE;
   zero_kernel<<<global_size, LOCAL_SIZE>>>(d_v, n);
 }
 
 __global__ void __launch_bounds__(LOCAL_SIZE)
     copy_kernel(scalar *__restrict__ a, const scalar *__restrict__ b,
-                const uint n) {
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) a[i] = b[i];
+                const int n) {
+  if (gIdx(x) < n) a[gIdx(x)] = b[gIdx(x)];
 }
 
-inline static void copy(scalar *d_a, const scalar *d_b, const uint n) {
+inline static void copy(scalar *d_a, const scalar *d_b, const int n) {
   const size_t global_size = (n + LOCAL_SIZE - 1) / LOCAL_SIZE;
   copy_kernel<<<global_size, LOCAL_SIZE>>>(d_a, d_b, n);
 }
 
 __global__ void __launch_bounds__(LOCAL_SIZE)
     add2s1_kernel(scalar *__restrict__ a, const scalar *__restrict__ b,
-                  const scalar c, const uint n) {
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) a[i] = c * a[i] + b[i];
+                  const scalar c, const int n) {
+  if (gIdx(x) < n) a[gIdx(x)] = c * a[gIdx(x)] + b[gIdx(x)];
 }
 
 inline static void add2s1(scalar *d_a, const scalar *d_b, const scalar c,
-                          const uint n) {
+                          const int n) {
   const size_t global_size = (n + LOCAL_SIZE - 1) / LOCAL_SIZE;
   add2s1_kernel<<<global_size, LOCAL_SIZE>>>(d_a, d_b, c, n);
 }
 
 __global__ void __launch_bounds__(LOCAL_SIZE)
     add2s2_kernel(scalar *__restrict__ a, const scalar *__restrict__ b,
-                  const scalar c, const uint n) {
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n) a[i] += c * b[i];
+                  const scalar c, const int n) {
+  if (gIdx(x) < n) a[gIdx(x)] += c * b[gIdx(x)];
 }
 
 inline static void add2s2(scalar *d_a, const scalar *d_b, const scalar c,
-                          const uint n) {
+                          const int n) {
   const size_t global_size = (n + LOCAL_SIZE - 1) / LOCAL_SIZE;
   add2s2_kernel<<<global_size, LOCAL_SIZE>>>(d_a, d_b, c, n);
 }
@@ -118,9 +114,8 @@ __global__ void __launch_bounds__(LOCAL_SIZE)
                     const uint n) {
   extern __shared__ scalar s_abc[];
 
-  const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < n)
-    s_abc[threadIdx.x] = a[i] * b[i] * c[i];
+  if (gIdx(x) < n)
+    s_abc[threadIdx.x] = a[gIdx(x)] * b[gIdx(x)] * c[gIdx(x)];
   else
     s_abc[threadIdx.x] = 0;
 
@@ -287,3 +282,4 @@ inline static void gs(scalar *d_v, const uint *d_gs_off, const uint *d_gs_idx,
 #undef LOCAL_SIZE
 #undef bIdx
 #undef tIdx
+#undef gIdx
