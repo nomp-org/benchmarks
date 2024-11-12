@@ -18,7 +18,7 @@ function print_help() {
   echo "  --enable-backend <backend> Set backend to be used for the build."
 }
 
-: ${NEKBONE_CC:=cc}
+: ${NEKBONE_CC:=""}
 : ${NEKBONE_CFLAGS:="-O3"}
 : ${NEKBONE_BUILD_TYPE:=RelWithDebInfo}
 : ${NEKBONE_BUILD_DIR:=`pwd`/build}
@@ -108,10 +108,10 @@ done
 
 ### Don't touch anything that follows this line. ###
 cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} \
-  -DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE} \
-  -DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX} \
   -DCMAKE_C_COMPILER=${NEKBONE_CC} \
   -DCMAKE_C_FLAGS=${NEKBONE_CFLAGS} \
+  -DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE} \
+  -DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX} \
   -DENABLE_OPENCL=${NEKBONE_OPENCL} \
   -DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR} \
   -DOpenCL_LIBRARY=${NEKBONE_OPENCL_LIB_DIR} \

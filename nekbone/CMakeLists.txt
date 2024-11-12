@@ -48,7 +48,9 @@ if (ENABLE_CUDA)
 endif()
 
 if (ENABLE_HIP)
+  enable_language(HIP)
   list(APPEND SOURCES backends/nekbone-backend-hip.c)
+  set_source_files_properties(backends/nekbone-backend-hip.c PROPERTIES LANGUAGE HIP)
 endif()
 
 set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
@@ -73,13 +75,6 @@ endif()
 
 if (ENABLE_CUDA)
   target_link_libraries(nekbone PRIVATE CUDA::cudart CUDA::nvrtc)
-endif()
-
-if (ENABLE_HIP)
-  set_source_files_properties(backends/nekbone-backend-hip.c
-    PROPERTIES COMPILE_FLAGS "-x hip")
-  target_compile_options(nekbone PRIVATE -ffast-math
-    --amdgpu-target=gfx90a:sramecc+:xnack-)
 endif()
 
 if (ENABLE_NOMP)
