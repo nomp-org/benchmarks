@@ -55,23 +55,21 @@ if (ENABLE_HIP)
 endif()
 
 if (ENABLE_SYCL)
+  enable_language(CXX)
   list(APPEND SOURCES backends/nekbone-backend-sycl.cpp)
 endif()
-
-set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
-  C_STANDARD_REQUIRED ON)
 
 add_library(nekbone SHARED ${SOURCES})
 set_target_properties(nekbone PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
   PUBLIC_HEADER include/nekbone.h)
 target_include_directories(nekbone PRIVATE include)
-target_compile_options(nekbone PRIVATE
-  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
+target_compile_options(nekbone PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>)
 # Add -Wpedantic if compiler is not MSVC and language CUDA is not enabled.
 target_compile_options(nekbone PRIVATE
   $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:-Wpedantic>)
 # Add flags from the user.
+target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
 target_link_libraries(nekbone PRIVATE m)
 
 if (ENABLE_OPENCL)
@@ -95,7 +93,13 @@ else()
     -Wno-unused-parameter -Wno-unused-variable)
 endif()
 
-target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
+if (ENABLE_SYCL)
+  set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
+    C_STANDARD_REQUIRED ON)
+else()
+  set_source_files_properties(${SOURCES} PROPERTIES CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON)
+endif()
 
 add_executable(nekbone-driver bin/nekbone-driver.c)
 set_target_properties(nekbone-driver PROPERTIES VERSION ${PROJECT_VERSION})
@@ -116,6 +120,5 @@ if (CLANG_FORMAT)
     COMMENT "Running clang-format ...")
 endif()
 
-install(TARGETS nekbone nekbone-driver RUNTIME DESTINATION bin LIBRARY DESTINATION lib
-  PUBLIC_HEADER DESTINATION include
-)
+install(TARGETS nekbone nekbone-driver RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include)

@@ -24,38 +24,42 @@ function print_help() {
 : ${NEKBONE_BUILD_DIR:=`pwd`/build}
 : ${NEKBONE_INSTALL_PREFIX:=`pwd`/install}
 : ${NEKBONE_LIB_SUFFIX:=.so}
-: ${NEKBONE_OPENCL:=OFF}
+: ${NEKBONE_SYCL:="OFF"}
+: ${NEKBONE_CUDA:="OFF"}
+: ${NEKBONE_HIP:="OFF"}
+: ${NEKBONE_NOMP:="OFF"}
+: ${NEKBONE_OPENCL:="OFF"}
 : ${NEKBONE_OPENCL_INC_DIR:=${CONDA_PREFIX}/include}
 : ${NEKBONE_OPENCL_LIB_DIR:=${CONDA_PREFIX}/lib/libOpenCL${NEKBONE_LIB_SUFFIX}}
-: ${NEKBONE_CUDA:=OFF}
-: ${NEKBONE_HIP:=OFF}
-: ${NEKBONE_NOMP:=OFF}
 
 backend_set=0
 
-function set_backend() {
+function check_backend() {
   if [[ ${backend_set} -eq 1 ]]; then
     return
   fi
 
-  case $1 in
+  backend=$1
+  backend=$( echo ${backend} | awk '{ print tolower($0) }' )
+  case ${backend} in
     "sycl")
-      NEKBONE_SYCL=ON
-      backend_set=1
-    "opencl")
-      NEKBONE_OPENCL=ON
+      NEKBONE_SYCL="ON"
       backend_set=1
       ;;
     "cuda")
-      NEKBONE_CUDA=ON
+      NEKBONE_CUDA="ON"
       backend_set=1
       ;;
     "hip")
-      NEKBONE_HIP=ON
+      NEKBONE_HIP="ON"
       backend_set=1
       ;;
     "nomp")
-      NEKBONE_NOMP=ON
+      NEKBONE_NOMP="ON"
+      backend_set=1
+      ;;
+    "opencl")
+      NEKBONE_OPENCL="ON"
       backend_set=1
       ;;
     *)
@@ -97,7 +101,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --enable-backend)
-      set_backend "$2"
+      check_backend "$2"
       shift
       shift
       ;;
@@ -109,18 +113,31 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "${NEKBONE_CC}" ]]; then
+  echo "C compiler is not set."
+  exit 1
+fi
+
 ### Don't touch anything that follows this line. ###
-cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} \
-  -DCMAKE_C_COMPILER=${NEKBONE_CC} \
-  -DCMAKE_C_FLAGS=${NEKBONE_CFLAGS} \
-  -DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE} \
-  -DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX} \
-  -DENABLE_SYCL=${NEKBONE_SYCL} \
-  -DENABLE_OPENCL=${NEKBONE_OPENCL} \
-  -DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR} \
-  -DOpenCL_LIBRARY=${NEKBONE_OPENCL_LIB_DIR} \
-  -DENABLE_CUDA=${NEKBONE_CUDA} \
-  -DENABLE_HIP=${NEKBONE_HIP} \
-  -DENABLE_NOMP=${NEKBONE_NOMP}
+NEKBONE_CMAKE_CMD="cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} "\
+"-DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE} "\
+"-DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX} "\
+"-DENABLE_SYCL=${NEKBONE_SYCL} "\
+"-DENABLE_CUDA=${NEKBONE_CUDA} "\
+"-DENABLE_HIP=${NEKBONE_HIP} "\
+"-DENABLE_NOMP=${NEKBONE_NOMP} "\
+"-DENABLE_OPENCL=${NEKBONE_OPENCL} "\
+"-DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR} "\
+"-DOpenCL_LIBRARY=${NEKBONE_OPENCL_LIB_DIR}"
+
+if [[ "${NEKBONE_SYCL}" == "ON" ]]; then
+  NEKBONE_CFLAGS="-fsycl ${NEKBONE_CFLAGS}"
+  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_COMPILER=${NEKBONE_CC} -DCMAKE_CXX_FLAGS=\"${NEKBONE_CFLAGS}\""
+else
+  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_COMPILER=${NEKBONE_CC} -DCMAKE_C_FLAGS=${NEKBONE_CFLAGS}"
+fi
+
+echo "command: ${NEKBONE_CMAKE_CMD}"
+eval ${NEKBONE_CMAKE_CMD}
 
 cmake --build ${NEKBONE_BUILD_DIR} --target install -j4

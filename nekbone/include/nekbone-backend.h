@@ -12,13 +12,9 @@ NEKBONE_INTERN void nekbone_register_backend(
     double (*run)(const struct nekbone_t *, const scalar *),
     void (*finalize)(void));
 
-NEKBONE_INTERN void nekbone_opencl_init(void);
-
-NEKBONE_INTERN void nekbone_cuda_init(void);
-
-NEKBONE_INTERN void nekbone_hip_init(void);
-
-NEKBONE_INTERN void nekbone_nomp_init(void);
+#define NEKBONE_BACKEND(function) NEKBONE_INTERN void function(void);
+#include "nekbone-backend-list.h"
+#undef NEKBONE_BACKEND
 
 // Register GPU backends.
 NEKBONE_INTERN void nekbone_register_backends(int verbose);
