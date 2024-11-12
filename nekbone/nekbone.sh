@@ -39,6 +39,9 @@ function set_backend() {
   fi
 
   case $1 in
+    "sycl")
+      NEKBONE_SYCL=ON
+      backend_set=1
     "opencl")
       NEKBONE_OPENCL=ON
       backend_set=1
@@ -112,6 +115,7 @@ cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} \
   -DCMAKE_C_FLAGS=${NEKBONE_CFLAGS} \
   -DCMAKE_BUILD_TYPE=${NEKBONE_BUILD_TYPE} \
   -DCMAKE_INSTALL_PREFIX=${NEKBONE_INSTALL_PREFIX} \
+  -DENABLE_SYCL=${NEKBONE_SYCL} \
   -DENABLE_OPENCL=${NEKBONE_OPENCL} \
   -DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR} \
   -DOpenCL_LIBRARY=${NEKBONE_OPENCL_LIB_DIR} \

@@ -10,6 +10,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Build Options:
+option(ENABLE_SYCL "Build SYCL backend" OFF)
 option(ENABLE_OPENCL "Build OPENCL backend" OFF)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
 option(ENABLE_HIP "Build HIP backend" OFF)
@@ -51,6 +52,10 @@ if (ENABLE_HIP)
   enable_language(HIP)
   list(APPEND SOURCES backends/nekbone-backend-hip.c)
   set_source_files_properties(backends/nekbone-backend-hip.c PROPERTIES LANGUAGE HIP)
+endif()
+
+if (ENABLE_SYCL)
+  list(APPEND SOURCES backends/nekbone-backend-sycl.cpp)
 endif()
 
 set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
