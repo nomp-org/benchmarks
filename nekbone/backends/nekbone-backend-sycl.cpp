@@ -36,23 +36,23 @@ static void sycl_mem_init(const struct nekbone_t *nekbone) {
 
   // Copy multiplicity array.
   d_c = malloc_device<scalar>(n, q);
-  q.copy(d_c, nekbone->c, n);
+  q.copy(nekbone->c, d_c, n);
 
   // Copy geometric factors and derivative matrix.
   const uint ng = 6 * n;
   d_g           = malloc_device<scalar>(ng, q);
-  q.copy(d_g, nekbone->g, ng);
+  q.copy(nekbone->g, d_g, ng);
 
   const uint nx1 = nekbone->nx1, nx2 = nx1 * nx1;
   d_D = malloc_device<scalar>(nx2, q);
-  q.copy(d_D, nekbone->D, nx2);
+  q.copy(nekbone->D, d_D, nx2);
 
   // Copy gather-scatter offsets and indices.
   d_gs_off = malloc_device<uint>(nekbone->gs_n + 1, q);
-  q.copy(d_gs_off, nekbone->gs_off, nekbone->gs_n + 1);
+  q.copy(nekbone->gs_off, d_gs_off, nekbone->gs_n + 1);
 
   d_gs_idx = malloc_device<uint>(nekbone->gs_off[nekbone->gs_n], q);
-  q.copy(d_gs_idx, nekbone->gs_idx, nekbone->gs_off[nekbone->gs_n]);
+  q.copy(nekbone->gs_idx, d_gs_idx, nekbone->gs_off[nekbone->gs_n]);
 
   // Work array.
   wrk   = nekbone_calloc(scalar, n);
@@ -74,8 +74,7 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
   q.parallel_for(n, reduction(d_wrk, plus<scalar>()), [=](auto id, auto &sum) {
      sum += a[id] * b[id] * c[id];
    }).wait();
-  q.copy(wrk, d_wrk, 1);
-  q.wait();
+  q.copy(d_wrk, wrk, 1).wait();
   return wrk[0];
 }
 
@@ -194,7 +193,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
-  q.copy(d_r, const_cast<scalar *>(r), n);
+  q.copy(r, d_r, n).wait();
 
   scalar pap = 0, rtz1 = 1, rtz2 = 0;
 
