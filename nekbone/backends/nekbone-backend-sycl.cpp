@@ -206,6 +206,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
   // Run CG on the device.
   scalar rnorm = std::sqrt(glsc3(d_r, d_c, d_r, n));
   scalar r0    = rnorm;
+  nekbone_debug(nekbone->verbose, "sycl_run: iteration 0, rnorm = %e\n", rnorm);
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(d_z, d_r, n);
@@ -229,7 +230,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(d_r, d_w, -alpha, n);
 
     rnorm = std::sqrt(glsc3(d_r, d_c, d_r, n));
-    nekbone_debug(nekbone->verbose, "sycl_run: iteration %d, rnorm = %e\n", i,
+    nekbone_debug(nekbone->verbose, "sycl_run: iteration %d, rnorm = %e\n", i + 1,
                   rnorm);
   }
 

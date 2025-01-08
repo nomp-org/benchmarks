@@ -610,8 +610,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
                              r, 0, NULL, NULL),
         "clEnqueueWriteBuffer(r)");
 
-  scalar pap  = 0;
-  scalar rtz1 = 1, rtz2 = 0;
+  scalar pap = 0, rtz1 = 1, rtz2 = 0;
 
   // Zero out the solution.
   zero(&x_mem, n);
@@ -622,6 +621,8 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n));
   scalar r0    = rnorm;
+  nekbone_debug(nekbone->verbose, "opencl_run: iteration 0, rnorm = %e\n",
+                rnorm);
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(&z_mem, &r_mem, n);
@@ -644,10 +645,9 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(&x_mem, &p_mem, alpha, n);
     add2s2(&r_mem, &w_mem, -alpha, n);
 
-    scalar rtr = glsc3(&r_mem, &c_mem, &r_mem, n);
-    rnorm      = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "opencl_run: iteration %d, rnorm = %e\n", i,
-                  rnorm);
+    rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n));
+    nekbone_debug(nekbone->verbose, "opencl_run: iteration %d, rnorm = %e\n",
+                  i + 1, rnorm);
   }
   check(clFinish(ocl_queue), "clFinish(cg)");
   clock_t t1 = clock();

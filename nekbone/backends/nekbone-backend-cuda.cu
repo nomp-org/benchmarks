@@ -119,6 +119,7 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
 
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(d_r, d_c, d_r, n));
+  nekbone_debug(nekbone->verbose, "cuda_run: iteration 0, rnorm = %e\n", rnorm);
   scalar r0 = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
@@ -144,7 +145,7 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
     rnorm = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "cuda_run: iteration %d, rnorm = %e\n", i,
+    nekbone_debug(nekbone->verbose, "cuda_run: iteration %d, rnorm = %e\n", i + 1,
                   rnorm);
   }
 

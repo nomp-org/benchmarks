@@ -203,6 +203,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
   scalar r0    = rnorm;
+  nekbone_debug(nekbone->verbose, "nomp_run: iteration 0, rnorm = %e\n", rnorm);
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(z, r, n);
@@ -229,8 +230,8 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm      = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "nomp_run: iteration %d, rnorm = %e\n", i,
-                  rnorm);
+    nekbone_debug(nekbone->verbose, "nomp_run: iteration %d, rnorm = %e\n",
+                  i + 1, rnorm);
   }
 #pragma nomp sync
   clock_t t1 = clock();

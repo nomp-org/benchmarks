@@ -169,7 +169,9 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
   mask(d_r, n);
 
   // Run CG on the device.
-  scalar rnorm = sqrt(glsc3(d_r, d_c, d_r, n)), r0 = rnorm;
+  scalar rnorm = sqrt(glsc3(d_r, d_c, d_r, n));
+  nekbone_debug(nekbone->verbose, "hip_run: iteration 0, rnorm = %e\n", rnorm);
+  scalar r0 = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     copy(d_z, d_r, n);
 
@@ -193,8 +195,8 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
     rnorm      = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "hip_run: iteration %d, rnorm = %e\n", i,
-                  rnorm);
+    nekbone_debug(nekbone->verbose, "hip_run: iteration %d, rnorm = %e\n",
+                  i + 1, rnorm);
   }
   check_runtime(hipDeviceSynchronize());
   clock_t t1 = clock() - t0;
