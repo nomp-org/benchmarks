@@ -24,7 +24,7 @@ static const size_t local_size = 512;
 
 static void sycl_mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
-                "sycl_mem_init: copy problem data to device ... ");
+                "sycl_mem_init: copy problem data to device ...\n");
   const uint n = nekbone_get_local_dofs(nekbone);
 
   // Allocate device buffers.
@@ -71,15 +71,19 @@ inline static void mask(scalar *x) {
 
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
                            const uint n) {
+  // FIXME: Temporary workaround.
+  zero(d_wrk, n);
   q.parallel_for(n, reduction(d_wrk, plus<scalar>()), [=](auto id, auto &sum) {
-     sum += a[id] * b[id] * c[id];
+     int    idx = static_cast<int>(id);
+     scalar tmp = a[idx] * b[idx] * c[idx];
+     sum += tmp;
    }).wait();
   q.copy(d_wrk, wrk, 1).wait();
   return wrk[0];
 }
 
 inline static void copy(scalar *a, const scalar *b, const uint n) {
-  q.parallel_for(n, [=](auto id) { a[id] = b[id]; }).wait();
+  q.copy(b, a, n).wait();
 }
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
@@ -102,15 +106,15 @@ static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 }
 
 static void ax(scalar *w, const scalar *u, const scalar *G, const scalar *D,
-               const uint nelt, const uint nx1) {
-  auto cgh = [&](auto &h) {
+               const uint nelt, const uint nx1, const uint n) {
+  auto cgh = [=](auto &h) {
     SLM_2D s_D{range<2>{nx1, nx1}, h};
     SLM_3D s_ur{range<3>{nx1, nx1, nx1}, h};
     SLM_3D s_us{range<3>{nx1, nx1, nx1}, h};
     SLM_3D s_ut{range<3>{nx1, nx1, nx1}, h};
 
     h.parallel_for(
-        nd_range<3>{range<3>{nelt * nx1, nx1, nx1}, range<3>(nx1, nx1, nx1)},
+        nd_range<3>{range<3>{nelt * nx1, nx1, nx1}, range<3>{nx1, nx1, nx1}},
         [=](auto id) {
           const uint e = id.get_group(0);
           const uint i = id.get_local_id(0);
@@ -206,7 +210,8 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
   // Run CG on the device.
   scalar rnorm = std::sqrt(glsc3(d_r, d_c, d_r, n));
   scalar r0    = rnorm;
-  nekbone_debug(nekbone->verbose, "sycl_run: iteration 0, rnorm = %e\n", rnorm);
+  nekbone_debug(nekbone->verbose, "0: sycl_run: iteration 0, rnorm = %e\n",
+                rnorm);
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
     copy(d_z, d_r, n);
@@ -218,7 +223,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
     if (i == 0) beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-    ax(d_w, d_p, d_g, d_D, n, nekbone->nx1);
+    ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1, n);
     gs(d_w, d_gs_off, d_gs_idx, nekbone->gs_n);
     add2s2(d_w, d_p, 0.1, n);
     mask(d_w);
@@ -230,8 +235,8 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(d_r, d_w, -alpha, n);
 
     rnorm = std::sqrt(glsc3(d_r, d_c, d_r, n));
-    nekbone_debug(nekbone->verbose, "sycl_run: iteration %d, rnorm = %e\n", i + 1,
-                  rnorm);
+    nekbone_debug(nekbone->verbose, "sycl_run: iteration %d, rnorm = %e\n",
+                  i + 1, rnorm);
   }
 
   q.wait();
