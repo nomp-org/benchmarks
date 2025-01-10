@@ -71,9 +71,9 @@ inline static void mask(scalar *x) {
 
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
                            const uint n) {
-  // FIXME: Temporary workaround.
-  zero(d_wrk, n);
-  q.parallel_for(n, reduction(d_wrk, plus<scalar>()), [=](auto id, auto &sum) {
+  auto red = reduction(d_wrk, plus<scalar>{},
+                       {property::reduction::initialize_to_identity{}});
+  q.parallel_for(n, red, [=](auto id, auto &sum) {
      int    idx = static_cast<int>(id);
      scalar tmp = a[idx] * b[idx] * c[idx];
      sum += tmp;
