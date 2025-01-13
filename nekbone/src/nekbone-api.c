@@ -1,8 +1,8 @@
-#include "nekbone-backend.h"
-#include "nekbone-impl.h"
-#include <ctype.h>
 #include <getopt.h>
 #include <string.h>
+
+#include "nekbone-backend.h"
+#include "nekbone-impl.h"
 
 // Dynamic memory free function.
 void nekbone_free_(void **p) { free(*p), *p = NULL; }
@@ -18,16 +18,13 @@ static void print_help(const char *name) {
   printf(
       "  --nekbone-backend=<backend>, Backend (CUDA, OpenCL, nomp, etc.).\n");
   printf(
+      "  --nekbone-scripts-dir=<dir>, Path to find the scripts.\n");
+  printf(
       "  --nekbone-nelems <# elements>, Number of elements (1, 2, 3, ...).\n");
   printf("  --nekbone-order <order>, Polynomial order (1, 2, 3, ...).\n");
   printf("  --nekbone-max-iter=<iters>, Number of CG iterations (1, 2, 3, "
          "...).\n");
   printf("  --nekbone-help, Prints this help message and exit.\n");
-}
-
-inline static void set_backend(struct nekbone_t *nekbone, const char *backend) {
-  size_t len = strnlen(backend, BUFSIZ);
-  for (uint i = 0; i < len; i++) nekbone->backend[i] = toupper(backend[i]);
 }
 
 static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
@@ -37,6 +34,7 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
       {"nekbone-device-id", optional_argument, 0, 12},
       {"nekbone-platform-id", optional_argument, 0, 14},
       {"nekbone-backend", required_argument, 0, 16},
+      {"nekbone-scripts-dir", optional_argument, 0, 18},
       {"nekbone-nelems", required_argument, 0, 20},
       {"nekbone-order", required_argument, 0, 22},
       {"nekbone-max-iter", optional_argument, 0, 24},
@@ -53,6 +51,7 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
   // initialized later.
   nekbone->nelt = -1, nekbone->nx1 = -1;
   strncpy(nekbone->backend, "", 1);
+  strncpy(nekbone->scripts_dir, "", 1);
 
   char **argv = *argv_;
   for (;;) {
@@ -63,7 +62,8 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
     case 10: nekbone->verbose = atoi(optarg); break;
     case 12: nekbone->device = atoi(optarg); break;
     case 14: nekbone->platform = atoi(optarg); break;
-    case 16: set_backend(nekbone, optarg); break;
+    case 16: strncpy(nekbone->backend, optarg, BUFSIZ); break;
+    case 18: strncpy(nekbone->scripts_dir, optarg, BUFSIZ); break;
     case 20: nekbone->nelt = atoi(optarg); break;
     case 22: nekbone->nx1 = atoi(optarg) + 1; break;
     case 24: nekbone->max_iter = atoi(optarg); break;

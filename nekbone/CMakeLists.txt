@@ -135,3 +135,4 @@ endif()
 
 install(TARGETS nekbone nekbone-driver RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include)
+install(FILES backends/nekbone.py backends/nekbone.okl DESTINATION scripts)

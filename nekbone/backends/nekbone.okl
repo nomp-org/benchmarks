@@ -1,0 +1,118 @@
+#define NEKBONE_IDX2(i, j)       ((i) + nx1 * (j))
+#define NEKBONE_IDX4(i, j, k, e) ((i) + nx1 * ((j) + nx1 * ((k) + nx1 * (e))))
+
+@kernel void zero(scalar *a, const uint n) {
+  for (int i = 0; i < n; i++; @tile(BLOCK_SIZE, @outer, @inner)) a[i] = 0;
+}
+
+@kernel void mask(scalar *a) {
+  for (int i = 0; i < 1; i++; @tile(BLOCK_SIZE, @outer, @inner)) a[i] = 0;
+}
+
+@kernel void glsc3(scalar *wrk, const scalar *a, const scalar *b,
+                   const scalar *c, const uint n) {
+  for (int block = 0; block < (n + BLOCK_SIZE - 1) / BLOCK_SIZE; block++;
+       @outer) {
+    @shared scalar s_wrk[BLOCK_SIZE];
+
+    for (int t = 0; t < BLOCK_SIZE; t++; @inner) {
+      const int i = block * BLOCK_SIZE + t;
+      if (i < n)
+        s_wrk[t] = a[i] * b[i] * c[i];
+      else
+        s_wrk[t] = 0;
+    }
+
+    for (int alive = BLOCK_SIZE / 2; alive > 0; alive /= 2) {
+      for (int t = 0; t < BLOCK_SIZE; t++; @inner) {
+        if (t < alive) s_wrk[t] = s_wrk[t] + s_wrk[t + alive];
+      }
+    }
+
+    for (int t = 0; t < BLOCK_SIZE; t++; @inner) {
+      if (t == 0) wrk[block] = s_wrk[0];
+    }
+  }
+}
+
+@kernel void copy(scalar *a, const scalar *b, const uint n) {
+  for (int i = 0; i < n; i++; @tile(BLOCK_SIZE, @outer, @inner)) a[i] = b[i];
+}
+
+@kernel void add2s1(scalar *a, const scalar *b, const scalar c, const uint n) {
+  for (int i = 0; i < n; i++; @tile(BLOCK_SIZE, @outer, @inner))
+    a[i] = c * a[i] + b[i];
+}
+
+@kernel void add2s2(scalar *a, const scalar *b, const scalar c, const uint n) {
+  for (int i = 0; i < n; i++; @tile(BLOCK_SIZE, @outer, @inner))
+    a[i] = a[i] + c * b[i];
+}
+
+@kernel void ax(scalar *w, const scalar *u, const scalar *G, const scalar *D,
+                const int nelt, const uint nx1, const uint n) {
+  for (int e = 0; e < nelt; e++; @outer) {
+    @shared scalar s_D[NX1][NX1];
+    @shared scalar s_ur[NX1][NX1][NX1], s_us[NX1][NX1][NX1];
+    @shared scalar s_ut[NX1][NX1][NX1];
+
+    for (int i = 0; i < NX1; i++; @inner) {
+      for (int j = 0; j < NX1; j++; @inner) {
+        for (int k = 0; k < NX1; k++; @inner) {
+          s_ur[k][j][i] = 0;
+          if (k == 0) s_D[j][i] = D[NEKBONE_IDX2(i, j)];
+          s_us[k][j][i] = 0;
+          s_ut[k][j][i] = 0;
+        }
+
+        for (int k = 0; k < NX1; k++; @inner) {
+          for (uint l = 0; l < NX1; ++l) {
+            s_ur[k][j][i] += s_D[i][l] * u[NEKBONE_IDX4(l, j, k, e)];
+            s_us[k][j][i] += s_D[j][l] * u[NEKBONE_IDX4(i, l, k, e)];
+            s_ut[k][j][i] += s_D[k][l] * u[NEKBONE_IDX4(i, j, l, e)];
+          }
+        }
+
+        for (int k = 0; k < NX1; k++; @inner) {
+          const uint gbase = 6 * NEKBONE_IDX4(i, j, k, e);
+          scalar     r_G00 = G[gbase + 0];
+          scalar     r_G01 = G[gbase + 1];
+          scalar     r_G02 = G[gbase + 2];
+          scalar     r_G11 = G[gbase + 3];
+          scalar     r_G12 = G[gbase + 4];
+          scalar     r_G22 = G[gbase + 5];
+
+          scalar wr = r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] +
+                      r_G02 * s_ut[k][j][i];
+          scalar ws = r_G01 * s_ur[k][j][i] + r_G11 * s_us[k][j][i] +
+                      r_G12 * s_ut[k][j][i];
+          scalar wt = r_G02 * s_ur[k][j][i] + r_G12 * s_us[k][j][i] +
+                      r_G22 * s_ut[k][j][i];
+          @barrier;
+          s_ur[k][j][i] = wr;
+          s_us[k][j][i] = ws;
+          s_ut[k][j][i] = wt;
+          @barrier;
+        }
+
+        for (int k = 0; k < NX1; k++; @inner) {
+          scalar wo = 0;
+          for (uint l = 0; l < NX1; l++) {
+            wo += s_D[l][i] * s_ur[k][j][l] + s_D[l][j] * s_us[k][l][i] +
+                  s_D[l][k] * s_ut[l][j][i];
+          }
+          w[NEKBONE_IDX4(i, j, k, e)] = wo;
+        }
+      }
+    }
+  }
+}
+
+@kernel void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
+                const uint n) {
+  for (int i = 0; i < n; i++; @tile(BLOCK_SIZE, @outer, @inner)) {
+    scalar s = 0;
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++) s += v[gs_idx[j]];
+    for (uint j = gs_off[i]; j < gs_off[i + 1]; j++) v[gs_idx[j]] = s;
+  }
+}
