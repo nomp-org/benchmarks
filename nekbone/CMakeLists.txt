@@ -10,6 +10,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Build Options:
+option(ENABLE_OCCA "Build OCCA backend" OFF)
 option(ENABLE_SYCL "Build SYCL backend" OFF)
 option(ENABLE_OPENCL "Build OPENCL backend" OFF)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
@@ -28,6 +29,14 @@ configure_file(${CMAKE_SOURCE_DIR}/include/nekbone-defs.h.in
 
 set(SOURCES src/nekbone-api.c src/nekbone-setup.c src/nekbone-backend.c
   backends/nekbone-backend-dummy.c backends/nekbone-backend-nomp.c)
+
+if (ENABLE_OCCA)
+  find_package(OCCA REQUIRED)
+  enable_language(CXX)
+  if (OCCA_FOUND)
+    list(APPEND SOURCES backends/nekbone-backend-occa.cpp)
+  endif()
+endif()
 
 if (ENABLE_OPENCL)
   find_package(OpenCL REQUIRED)
@@ -72,6 +81,10 @@ target_compile_options(nekbone PRIVATE
 target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
 target_link_libraries(nekbone PRIVATE m)
 
+if (ENABLE_OCCA)
+  target_link_libraries(nekbone PRIVATE OCCA::libocca)
+endif()
+
 if (ENABLE_OPENCL)
   target_link_libraries(nekbone PRIVATE OpenCL::OpenCL)
 endif()
@@ -93,12 +106,12 @@ else()
     -Wno-unused-parameter -Wno-unused-variable)
 endif()
 
-if (ENABLE_SYCL)
-  set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
-    C_STANDARD_REQUIRED ON)
-else()
+if (ENABLE_SYCL OR ENABLE_OCCA)
   set_source_files_properties(${SOURCES} PROPERTIES CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON)
+else()
+  set_source_files_properties(${SOURCES} PROPERTIES C_STANDARD 11
+    C_STANDARD_REQUIRED ON)
 endif()
 
 add_executable(nekbone-driver bin/nekbone-driver.c)
