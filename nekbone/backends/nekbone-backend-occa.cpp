@@ -9,11 +9,14 @@ static uint initialized = 0;
 
 static occa::device dev;
 
-static memory       d_r, d_x, d_z, d_p, d_w;
-static memory       d_c, d_g, d_D;
-static memory       d_gs_off, d_gs_idx;
-static memory       d_wrk;
-static scalar      *wrk;
+static memory d_r, d_x, d_z, d_p, d_w;
+static memory d_c, d_g, d_D;
+static memory d_gs_off, d_gs_idx;
+static memory d_wrk;
+
+static size_t  num_blocks;
+static scalar *wrk;
+
 static const size_t local_size = 512;
 
 static void occa_device_init(const struct nekbone_t *nekbone) {
@@ -55,8 +58,9 @@ static void occa_mem_init(const struct nekbone_t *nekbone) {
   d_gs_idx.copyFrom(nekbone->gs_idx);
 
   // Work array.
-  wrk   = nekbone_calloc(scalar, n);
-  d_wrk = dev.malloc<scalar>(n);
+  num_blocks = (n + local_size - 1) / local_size;
+  wrk        = nekbone_calloc(scalar, num_blocks);
+  d_wrk      = dev.malloc<scalar>(num_blocks);
 }
 
 static kernel k_zero, k_mask, k_glsc3, k_copy, k_add2s1, k_add2s2, k_gs, k_ax;
@@ -86,7 +90,7 @@ inline static scalar glsc3(const memory &a, const memory &b, const memory &c,
                            const uint n) {
   k_glsc3(d_wrk, a, b, c, n);
   d_wrk.copyTo(wrk);
-  for (int i = 1; i < (n + local_size - 1) / local_size; i++) wrk[0] += wrk[i];
+  for (size_t i = 1; i < num_blocks; i++) wrk[0] += wrk[i];
   return wrk[0];
 }
 
