@@ -2,9 +2,6 @@
 
 #include "nekbone-backend.h"
 
-#define TOKEN_PASTE_(x, y) x##y
-#define TOKEN_PASTE(x, y)  TOKEN_PASTE_(x, y)
-
 #define NEKBONE_IDX2(i, j)       ((i) + nx1 * (j))
 #define NEKBONE_IDX4(i, j, k, e) ((i) + nx1 * ((j) + nx1 * ((k) + nx1 * (e))))
 
@@ -16,11 +13,10 @@ static uint initialized = 0;
 
 static queue q;
 
-static scalar      *d_r, *d_x, *d_z, *d_p, *d_w;
-static scalar      *d_wrk, *wrk;
-static scalar      *d_c, *d_g, *d_D;
-static uint        *d_gs_off, *d_gs_idx;
-static const size_t local_size = 512;
+static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
+static scalar *d_wrk, *wrk;
+static scalar *d_c, *d_g, *d_D;
+static uint   *d_gs_off, *d_gs_idx;
 
 static void sycl_mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
