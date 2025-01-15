@@ -1,14 +1,13 @@
 #!/bin/bash
 set -e
 
-#--------------------------------------
 : ${PROJ_ID:=""}
 : ${QUEUE:="lustre_scaling"}
 : ${NEKBONE_INSTALL_DIR:=./install}
 
 ### Don't touch anything that follows this line. ###
-if [ $# -ne 4 ]; then
-  echo "Usage: [PROJ_ID=value] $0 <backend> <order> <max_iter> <hh:mm:ss>"
+if [[ $# -lt 1 && $# -gt 4 ]]; then
+  echo "Usage: [PROJ_ID=value] $0 <backend> <order> <max_iter> <hh:mm>"
   exit 1
 fi
 
@@ -34,21 +33,21 @@ if [ ! -f $bin ]; then
 fi
 
 backend=$1
-order=$2
-max_iter=$3
-time=$4
+order=${2:-7}
+max_iter=${3:-100}
+time=${4:-1:00}
 
 gpus_per_node=6
 tiles_per_gpu=2
-
-chk_case $TOTAL_RANKS
+qnodes=1
+backend_=${backend/:/_}
 
 #--------------------------------------
 # Generate the submission script
 SFILE=s.bin
 echo "#!/bin/bash" > $SFILE
 echo "#PBS -A $PROJ_ID" >>$SFILE
-echo "#PBS -N nekbone_${backend}" >>$SFILE
+echo "#PBS -N nekbone_${backend_}" >>$SFILE
 echo "#PBS -l walltime=${time}:00" >>$SFILE
 echo "#PBS -l select=$qnodes" >>$SFILE
 echo "#PBS -l place=scatter" >>$SFILE
@@ -78,7 +77,7 @@ echo "export OCCA_DPCPP_COMPILER_FLAGS=\"-fsycl -fsycl-targets=intel_gpu_pvc -ft
 for element in 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384; do
   echo "mpiexec --no-vni -n 1 -ppn 1 -- ./${CMD} $bin --nekbone-backend=${backend} " \
     "--nekbone-max-iter=${max_iter} --nekbone-order ${order} --nekbone-verbose=1 " \
-    "--nekbone-nelems $element" >>$SFILE
+    "--nekbone-scripts-dir=${NEKBONE_INSTALL_DIR}/scripts --nekbone-nelems $element" >>$SFILE
   echo "sleep 5" >>$SFILE
 done
 

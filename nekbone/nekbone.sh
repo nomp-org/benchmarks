@@ -32,6 +32,7 @@ function print_help() {
 : ${NEKBONE_OPENCL:="OFF"}
 
 : ${NEKBONE_OCCA_DIR:=${HOME}/libocca/occa/install}
+: ${NEKBONE_SYCL_FLAGS:="-fsycl -fsycl-targets=intel_gpu_pvc -ftarget-register-alloc-mode=pvc:auto -fma"}
 
 backend_set=0
 

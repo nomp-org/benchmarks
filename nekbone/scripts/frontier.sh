@@ -1,11 +1,12 @@
 #!/bin/bash
+set -e
 
 : ${PROJ_ID:="CSC262"}
 : ${NEKBONE_INSTALL_DIR:=./install}
 : ${QUEUE:="batch"}
 
 ### Don't touch anything that follows this line. ###
-if [ $# -ne 4 ]; then
+if [[ $# -lt 1 && $# -gt 4 ]]; then
   echo "Usage: [PROJ_ID=value] $0 <backend> <order> <max_iter> <hh:mm:ss>"
   exit 1
 fi
@@ -32,9 +33,10 @@ if [ ! -f $bin ]; then
 fi
 
 backend=$1
-order=$2
-max_iter=$3
-time=$4
+order=${2:-7}
+max_iter=${3:-100}
+time=${4:-1:00:00}
+
 time_fmt=`echo $time|tr ":" " "|awk '{print NF}'`
 if [ "$time_fmt" -ne "3" ]; then
   echo "Error: time is not in the format <hh:mm:ss>, got: ${time}"
