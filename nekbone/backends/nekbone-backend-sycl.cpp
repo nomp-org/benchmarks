@@ -101,8 +101,9 @@ static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
    }).wait();
 }
 
-static void ax(scalar *w, const scalar *u, const scalar *G, const scalar *D,
-               const uint nelt, const uint nx1, const uint n) {
+template <int nx1>
+static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
+                const uint nelt) {
   auto cgh = [=](auto &h) {
     SLM_2D s_D{range<2>{nx1, nx1}, h};
     SLM_3D s_ur{range<3>{nx1, nx1, nx1}, h};
@@ -163,6 +164,22 @@ static void ax(scalar *w, const scalar *u, const scalar *G, const scalar *D,
   q.submit(cgh).wait();
 }
 
+static void ax(scalar *w, const scalar *u, const scalar *G, const scalar *D,
+               const uint nelt, const uint nx1) {
+  switch (nx1) {
+  case 1: ax_<1>(w, u, G, D, nelt); break;
+  case 2: ax_<2>(w, u, G, D, nelt); break;
+  case 3: ax_<3>(w, u, G, D, nelt); break;
+  case 4: ax_<4>(w, u, G, D, nelt); break;
+  case 5: ax_<5>(w, u, G, D, nelt); break;
+  case 6: ax_<6>(w, u, G, D, nelt); break;
+  case 7: ax_<7>(w, u, G, D, nelt); break;
+  case 8: ax_<8>(w, u, G, D, nelt); break;
+  case 9: ax_<9>(w, u, G, D, nelt); break;
+  case 10: ax_<10>(w, u, G, D, nelt); break;
+  }
+}
+
 static void sycl_init(const struct nekbone_t *nekbone) {
   if (initialized) return;
   nekbone_debug(nekbone->verbose, "sycl_init: initializing sycl backend ...\n");
@@ -219,7 +236,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
     if (i == 0) beta = 0;
     add2s1(d_p, d_z, beta, n);
 
-    ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1, n);
+    ax(d_w, d_p, d_g, d_D, nekbone->nelt, nekbone->nx1);
     gs(d_w, d_gs_off, d_gs_idx, nekbone->gs_n);
     add2s2(d_w, d_p, 0.1, n);
     mask(d_w);
