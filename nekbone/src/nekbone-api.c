@@ -17,8 +17,7 @@ static void print_help(const char *name) {
       "  --nekbone-platform-id=<platform id>, Platform ID (0, 1, 2, ...).\n");
   printf(
       "  --nekbone-backend=<backend>, Backend (CUDA, OpenCL, nomp, etc.).\n");
-  printf(
-      "  --nekbone-scripts-dir=<dir>, Path to find the scripts.\n");
+  printf("  --nekbone-scripts-dir=<dir>, Path to find the scripts.\n");
   printf(
       "  --nekbone-nelems <# elements>, Number of elements (1, 2, 3, ...).\n");
   printf("  --nekbone-order <order>, Polynomial order (1, 2, 3, ...).\n");

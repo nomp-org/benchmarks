@@ -73,6 +73,8 @@ echo "export ZE_AFFINITY_MASK=\$gpu_id.\$tile_id" >> $CMD
 echo "\"\$@\"" >> $CMD
 chmod u+x $CMD
 
+echo "export OCCA_DPCPP_COMPILER_FLAGS=\"-fsycl -fsycl-targets=intel_gpu_pvc -ftarget-register-alloc-mode=pvc:auto -fma\"" >>$SFILE
+
 for element in 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384; do
   echo "mpiexec --no-vni -n 1 -ppn 1 -- ./${CMD} $bin --nekbone-backend=${backend} " \
     "--nekbone-max-iter=${max_iter} --nekbone-order ${order} --nekbone-verbose=1 " \

@@ -43,27 +43,27 @@ function check_backend() {
   backend=$1
   backend=$( echo ${backend} | awk '{ print tolower($0) }' )
   case ${backend} in
-    "occa")
+    occa)
       NEKBONE_OCCA="ON"
       backend_set=1
       ;;
-    "sycl")
+    sycl)
       NEKBONE_SYCL="ON"
       backend_set=1
       ;;
-    "cuda")
+    cuda)
       NEKBONE_CUDA="ON"
       backend_set=1
       ;;
-    "hip")
+    hip)
       NEKBONE_HIP="ON"
       backend_set=1
       ;;
-    "nomp")
+    nomp)
       NEKBONE_NOMP="ON"
       backend_set=1
       ;;
-    "opencl")
+    opencl)
       NEKBONE_OPENCL="ON"
       backend_set=1
       ;;

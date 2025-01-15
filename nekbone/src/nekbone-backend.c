@@ -1,5 +1,5 @@
-#include <string.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "nekbone-backend.h"
 
@@ -51,20 +51,19 @@ void nekbone_register_backends(int verbose) {
 void nekbone_init_backend(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_init_backend: ...\n");
 
-  char backend[BUFSIZ];
+  char         backend[BUFSIZ];
   const size_t len = strnlen(nekbone->backend, BUFSIZ);
-  for (size_t i = 0; i < len; i++)
-    backend[i] = toupper(nekbone->backend[i]);
+  for (size_t i = 0; i < len; i++) backend[i] = toupper(nekbone->backend[i]);
   backend[len] = '\0';
 
   for (uint i = 0; i < backends_count; i++) {
-    if (strncmp(backends[i]->name, backend, BUFSIZ) == 0) {
-      backends[i]->initialize(nekbone);
-      nekbone_debug(nekbone->verbose, "nekbone_init_backend: %s done.\n",
-                    backends[i]->name);
-      backend_active = i;
-      return;
-    }
+    const size_t len = strnlen(backends[i]->name, BUFSIZ);
+    if (strncmp(backends[i]->name, backend, len) != 0) continue;
+    backends[i]->initialize(nekbone);
+    nekbone_debug(nekbone->verbose, "nekbone_init_backend: %s done.\n",
+                  backends[i]->name);
+    backend_active = i;
+    return;
   }
   nekbone_error("nekbone_init_backend: Unknown backend: %s\n", backend);
 }

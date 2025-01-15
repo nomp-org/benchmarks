@@ -22,7 +22,13 @@ static const size_t local_size = 512;
 static void occa_device_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "occa_device_init: initialize device ...\n");
 
-  dev.setup({{"mode", "dpcpp"}, {"device_id", 0}, {"platform_id", 0}});
+  char backend[BUFSIZ];
+  strncpy(backend, nekbone->backend, BUFSIZ);
+
+  char *token = strtok(backend, ":");
+  token       = strtok(NULL, ":");
+
+  dev.setup({{"mode", token}, {"device_id", 0}, {"platform_id", 0}});
 }
 
 static void occa_mem_init(const struct nekbone_t *nekbone) {
