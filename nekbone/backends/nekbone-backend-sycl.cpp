@@ -58,11 +58,11 @@ static void sycl_mem_init(const struct nekbone_t *nekbone) {
 }
 
 inline static void zero(scalar *x, const uint n) {
-  q.parallel_for(n, [=](auto idx) { x[idx] = 0; }).wait();
+  q.parallel_for(n, [=](auto idx) { x[idx] = 0; });
 }
 
 inline static void mask(scalar *x) {
-  q.single_task([=]() { x[0] = 0; }).wait();
+  q.single_task([=]() { x[0] = 0; });
 }
 
 inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
@@ -70,35 +70,35 @@ inline static scalar glsc3(const scalar *a, const scalar *b, const scalar *c,
   auto red = reduction(d_wrk, plus<scalar>{},
                        {property::reduction::initialize_to_identity{}});
   q.parallel_for(n, red, [=](auto id, auto &sum) {
-     int    idx = static_cast<int>(id);
-     scalar tmp = a[idx] * b[idx] * c[idx];
-     sum += tmp;
-   }).wait();
-  q.copy(d_wrk, wrk, 1).wait();
+    int    idx = static_cast<int>(id);
+    scalar tmp = a[idx] * b[idx] * c[idx];
+    sum += tmp;
+  });
+  q.copy(d_wrk, wrk, 1);
   return wrk[0];
 }
 
 inline static void copy(scalar *a, const scalar *b, const uint n) {
-  q.copy(b, a, n).wait();
+  q.copy(b, a, n);
 }
 
 inline static void add2s1(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-  q.parallel_for(n, [=](auto id) { a[id] = c * a[id] + b[id]; }).wait();
+  q.parallel_for(n, [=](auto id) { a[id] = c * a[id] + b[id]; });
 }
 
 inline static void add2s2(scalar *a, const scalar *b, const scalar c,
                           const uint n) {
-  q.parallel_for(n, [=](auto id) { a[id] += c * b[id]; }).wait();
+  q.parallel_for(n, [=](auto id) { a[id] += c * b[id]; });
 }
 
 static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
                const uint n) {
   q.parallel_for(n, [=](auto id) {
-     scalar s = 0;
-     for (uint j = gs_off[id]; j < gs_off[id + 1]; j++) s += v[gs_idx[j]];
-     for (uint j = gs_off[id]; j < gs_off[id + 1]; j++) v[gs_idx[j]] = s;
-   }).wait();
+    scalar s = 0;
+    for (uint j = gs_off[id]; j < gs_off[id + 1]; j++) s += v[gs_idx[j]];
+    for (uint j = gs_off[id]; j < gs_off[id + 1]; j++) v[gs_idx[j]] = s;
+  });
 }
 
 template <int nx1>
@@ -161,7 +161,7 @@ static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
         });
   };
 
-  q.submit(cgh).wait();
+  q.submit(cgh);
 }
 
 static void ax(scalar *w, const scalar *u, const scalar *G, const scalar *D,
@@ -192,7 +192,8 @@ static void sycl_init(const struct nekbone_t *nekbone) {
   if (nekbone->device >= devices.size())
     nekbone_error("sycl_init: device id is invalid: %d", nekbone->device);
 
-  q = queue{devices[nekbone->device]};
+  property_list q_props{property::queue::in_order()};
+  q = queue{devices[nekbone->device], q_props};
 
   sycl_mem_init(nekbone);
 
@@ -210,7 +211,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
-  q.copy(r, d_r, n).wait();
+  q.copy(r, d_r, n);
 
   scalar pap = 0, rtz1 = 1, rtz2 = 0;
 
