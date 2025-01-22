@@ -1,5 +1,5 @@
-#define NEKBONE_IDX2(i, j)       ((i) + nx1 * (j))
-#define NEKBONE_IDX4(i, j, k, e) ((i) + nx1 * ((j) + nx1 * ((k) + nx1 * (e))))
+#define NEKBONE_IDX2(i, j)       ((i) + NX1 * (j))
+#define NEKBONE_IDX4(i, j, k, e) ((i) + NX1 * ((j) + NX1 * ((k) + NX1 * (e))))
 
 @kernel void zero(scalar *a, const uint n) {
   for (int i = 0; i < n; i++; @tile(BLOCK_SIZE, @outer, @inner)) a[i] = 0;

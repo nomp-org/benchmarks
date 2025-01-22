@@ -105,14 +105,18 @@ template <int nx1>
 static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
                 const uint nelt) {
   auto cgh = [=](auto &h) {
-    SLM_2D s_D{range<2>{nx1, nx1}, h};
-    SLM_3D s_ur{range<3>{nx1, nx1, nx1}, h};
-    SLM_3D s_us{range<3>{nx1, nx1, nx1}, h};
-    SLM_3D s_ut{range<3>{nx1, nx1, nx1}, h};
-
     h.parallel_for(
         nd_range<3>{range<3>{nelt * nx1, nx1, nx1}, range<3>{nx1, nx1, nx1}},
         [=](auto id) {
+          auto &s_ut = *(sycl::ext::oneapi::group_local_memory_for_overwrite<
+                         scalar[nx1][nx1][nx1]>(id.get_group()));
+          auto &s_ur = *(sycl::ext::oneapi::group_local_memory_for_overwrite<
+                         scalar[nx1][nx1][nx1]>(id.get_group()));
+          auto &s_us = *(sycl::ext::oneapi::group_local_memory_for_overwrite<
+                         scalar[nx1][nx1][nx1]>(id.get_group()));
+          auto &s_D  = *(sycl::ext::oneapi::group_local_memory_for_overwrite<
+                        scalar[nx1][nx1]>(id.get_group()));
+
           const uint e = id.get_group(0);
           const uint i = id.get_local_id(0);
           const uint j = id.get_local_id(1);
