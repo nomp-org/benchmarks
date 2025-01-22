@@ -6,8 +6,6 @@
 #define NEKBONE_IDX4(i, j, k, e) ((i) + nx1 * ((j) + nx1 * ((k) + nx1 * (e))))
 
 using namespace sycl;
-using SLM_2D = local_accessor<scalar, 2>;
-using SLM_3D = local_accessor<scalar, 3>;
 
 static uint initialized = 0;
 
