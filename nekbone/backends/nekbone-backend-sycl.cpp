@@ -126,14 +126,12 @@ static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
           if (k == 0) s_D[j][i] = D[NEKBONE_IDX2(i, j)];
           s_us[k][j][i] = 0;
           s_ut[k][j][i] = 0;
-          id.barrier(access::fence_space::local_space);
 
           for (uint l = 0; l < nx1; l++) {
             s_ur[k][j][i] += s_D[i][l] * u[NEKBONE_IDX4(l, j, k, e)];
             s_us[k][j][i] += s_D[j][l] * u[NEKBONE_IDX4(i, l, k, e)];
             s_ut[k][j][i] += s_D[k][l] * u[NEKBONE_IDX4(i, j, l, e)];
           }
-          id.barrier(access::fence_space::local_space);
 
           const uint gbase = 6 * NEKBONE_IDX4(i, j, k, e);
           scalar     r_G00 = G[gbase + 0];
