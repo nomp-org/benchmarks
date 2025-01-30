@@ -11,15 +11,14 @@ static uint initialized = 0;
     }                                                                          \
   }
 
-#define check_driver(call)                                                     \
+#define check_runtime(call)                                                    \
   check_error(__FILE__, __LINE__, call, cudaError_t, cudaSuccess,              \
               cudaGetErrorName, "driver");
 
 static scalar *d_r, *d_x, *d_z, *d_p, *d_w;
 static scalar *d_wrk, *wrk;
 static scalar *d_c, *d_g, *d_D;
-static uint *d_gs_off, *d_gs_idx;
-static const size_t local_size = 512;
+static uint   *d_gs_off, *d_gs_idx;
 
 static void cuda_mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
@@ -28,67 +27,67 @@ static void cuda_mem_init(const struct nekbone_t *nekbone) {
   const uint n = nekbone_get_local_dofs(nekbone);
 
   // Allocate device buffers and copy problem data to device.
-  check_driver(cudaMalloc(&d_r, n * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_x, n * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_z, n * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_p, n * sizeof(scalar)));
-  check_driver(cudaMalloc(&d_w, n * sizeof(scalar)));
+  check_runtime(cudaMalloc(&d_r, n * sizeof(scalar)));
+  check_runtime(cudaMalloc(&d_x, n * sizeof(scalar)));
+  check_runtime(cudaMalloc(&d_z, n * sizeof(scalar)));
+  check_runtime(cudaMalloc(&d_p, n * sizeof(scalar)));
+  check_runtime(cudaMalloc(&d_w, n * sizeof(scalar)));
 
   // Copy multiplicity array.
-  check_driver(cudaMalloc(&d_c, n * sizeof(scalar)));
-  check_driver(
+  check_runtime(cudaMalloc(&d_c, n * sizeof(scalar)));
+  check_runtime(
       cudaMemcpy(d_c, nekbone->c, n * sizeof(scalar), cudaMemcpyHostToDevice));
 
   // Copy geometric factors and derivative matrix.
-  check_driver(cudaMalloc(&d_g, 6 * n * sizeof(scalar)));
-  check_driver(cudaMemcpy(d_g, nekbone->g, 6 * n * sizeof(scalar),
-                          cudaMemcpyHostToDevice));
+  check_runtime(cudaMalloc(&d_g, 6 * n * sizeof(scalar)));
+  check_runtime(cudaMemcpy(d_g, nekbone->g, 6 * n * sizeof(scalar),
+                           cudaMemcpyHostToDevice));
 
-  check_driver(cudaMalloc(&d_D, nekbone->nx1 * nekbone->nx1 * sizeof(scalar)));
-  check_driver(cudaMemcpy(d_D, nekbone->D,
-                          nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
-                          cudaMemcpyHostToDevice));
+  check_runtime(cudaMalloc(&d_D, nekbone->nx1 * nekbone->nx1 * sizeof(scalar)));
+  check_runtime(cudaMemcpy(d_D, nekbone->D,
+                           nekbone->nx1 * nekbone->nx1 * sizeof(scalar),
+                           cudaMemcpyHostToDevice));
 
   // Copy gather-scatter offsets and indices.
-  check_driver(cudaMalloc(&d_gs_off, (nekbone->gs_n + 1) * sizeof(uint)));
-  check_driver(cudaMemcpy(d_gs_off, nekbone->gs_off,
-                          (nekbone->gs_n + 1) * sizeof(uint),
-                          cudaMemcpyHostToDevice));
+  check_runtime(cudaMalloc(&d_gs_off, (nekbone->gs_n + 1) * sizeof(uint)));
+  check_runtime(cudaMemcpy(d_gs_off, nekbone->gs_off,
+                           (nekbone->gs_n + 1) * sizeof(uint),
+                           cudaMemcpyHostToDevice));
 
-  check_driver(
+  check_runtime(
       cudaMalloc(&d_gs_idx, nekbone->gs_off[nekbone->gs_n] * sizeof(uint)));
-  check_driver(cudaMemcpy(d_gs_idx, nekbone->gs_idx,
-                          nekbone->gs_off[nekbone->gs_n] * sizeof(uint),
-                          cudaMemcpyHostToDevice));
+  check_runtime(cudaMemcpy(d_gs_idx, nekbone->gs_idx,
+                           nekbone->gs_off[nekbone->gs_n] * sizeof(uint),
+                           cudaMemcpyHostToDevice));
 
   // Work array.
   wrk = nekbone_calloc(scalar, n);
-  check_driver(cudaMalloc(&d_wrk, n * sizeof(scalar)));
+  check_runtime(cudaMalloc(&d_wrk, n * sizeof(scalar)));
 
   nekbone_debug(nekbone->verbose, "done.\n");
 }
 
-#define unifiedDeviceSynchronize cudaDeviceSynchronize
-#define unifiedMemcpy cudaMemcpy
-#define unifiedMemcpyDeviceToHost cudaMemcpyDeviceToHost
+#define unified_device_synchronize    cudaDeviceSynchronize
+#define unified_memcpy                cudaMemcpy
+#define unified_memcpy_device_to_host cudaMemcpyDeviceToHost
 #include "nekbone-backend-unified-cuda-hip.h"
-#undef unifiedDeviceSynchronize
-#undef unifiedMemcpy
-#undef unifiedMemcpyDeviceToHost
+#undef unified_device_synchronize
+#undef unified_memcpy
+#undef unified_memcpy_device_to_host
 
 static void cuda_init(const struct nekbone_t *nekbone) {
   if (initialized) return;
   nekbone_debug(nekbone->verbose, "cuda_init: initializing cuda backend ...\n");
 
   int num_devices = 0;
-  check_driver(cudaGetDeviceCount(&num_devices));
+  check_runtime(cudaGetDeviceCount(&num_devices));
   if (nekbone->device >= (uint)num_devices) {
     nekbone_error("cuda_init: Invalid device id %d, only %d devices available.",
                   nekbone->device, num_devices);
   }
 
-  check_driver(cudaSetDeviceFlags(cudaDeviceMapHost));
-  check_driver(cudaFree(0));
+  check_runtime(cudaSetDeviceFlags(cudaDeviceMapHost));
+  check_runtime(cudaFree(0));
 
   cuda_mem_init(nekbone);
 
@@ -106,9 +105,9 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
   clock_t t0 = clock();
 
   // Copy rhs to device buffer.
-  check_driver(cudaMemcpy(d_r, r, n * sizeof(scalar), cudaMemcpyHostToDevice));
+  check_runtime(cudaMemcpy(d_r, r, n * sizeof(scalar), cudaMemcpyHostToDevice));
 
-  scalar pap = 0;
+  scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
 
   // Zero out the solution.
@@ -144,12 +143,12 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(d_r, d_w, -alpha, n);
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
-    rnorm = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "cuda_run: iteration %d, rnorm = %e\n", i + 1,
-                  rnorm);
+    rnorm      = sqrt(rtr);
+    nekbone_debug(nekbone->verbose, "cuda_run: iteration %d, rnorm = %e\n",
+                  i + 1, rnorm);
   }
 
-  check_driver(cudaDeviceSynchronize());
+  check_runtime(cudaDeviceSynchronize());
   clock_t t1 = clock();
 
   nekbone_debug(nekbone->verbose, "cuda_run: done.\n");
@@ -163,17 +162,17 @@ static scalar cuda_run(const struct nekbone_t *nekbone, const scalar *r) {
 static void cuda_finalize(void) {
   if (!initialized) return;
 
-  check_driver(cudaFree(d_r));
-  check_driver(cudaFree(d_x));
-  check_driver(cudaFree(d_z));
-  check_driver(cudaFree(d_p));
-  check_driver(cudaFree(d_w));
-  check_driver(cudaFree(d_c));
-  check_driver(cudaFree(d_g));
-  check_driver(cudaFree(d_D));
-  check_driver(cudaFree(d_gs_off));
-  check_driver(cudaFree(d_gs_idx));
-  check_driver(cudaFree(d_wrk));
+  check_runtime(cudaFree(d_r));
+  check_runtime(cudaFree(d_x));
+  check_runtime(cudaFree(d_z));
+  check_runtime(cudaFree(d_p));
+  check_runtime(cudaFree(d_w));
+  check_runtime(cudaFree(d_c));
+  check_runtime(cudaFree(d_g));
+  check_runtime(cudaFree(d_D));
+  check_runtime(cudaFree(d_gs_off));
+  check_runtime(cudaFree(d_gs_idx));
+  check_runtime(cudaFree(d_wrk));
   nekbone_free(&wrk);
 
   initialized = 0;
