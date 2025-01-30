@@ -32,10 +32,11 @@ if [ ! -f $bin ]; then
   exit 1
 fi
 
-backend=$1
+backend=${1:-"hip"}
 order=${2:-7}
 max_iter=${3:-100}
 time=${4:-1:00:00}
+num_trials=${5:-5}
 
 time_fmt=`echo $time|tr ":" " "|awk '{print NF}'`
 if [ "$time_fmt" -ne "3" ]; then
@@ -89,9 +90,11 @@ echo "date" >>$SFILE
 echo "" >>$SFILE
 
 for element in 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384; do
+for ((i=0; i<num_trials; i++)); do
   echo "srun -N 1 -n 1 $bin --nekbone-backend=${backend} --nekbone-max-iter=${max_iter} " \
     "--nekbone-order ${order} --nekbone-verbose=1 --nekbone-nelems $element" >>$SFILE
   echo "sleep 5" >>$SFILE
+done
 done
 
 sbatch $SFILE

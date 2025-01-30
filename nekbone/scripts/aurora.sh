@@ -49,6 +49,7 @@ backend_=${backend/:/_}
 SFILE=s.bin
 echo "#!/bin/bash" > $SFILE
 echo "#PBS -A $PROJ_ID" >>$SFILE
+echo "#PBS -q $QUEUE" >>$SFILE
 echo "#PBS -N nekbone_${backend_}" >>$SFILE
 echo "#PBS -l walltime=${time}:00" >>$SFILE
 echo "#PBS -l select=$qnodes" >>$SFILE
@@ -94,4 +95,4 @@ for ((i=0; i<num_trials; i++)); do
 done
 done
 
-qsub -q $QUEUE $SFILE
+qsub $SFILE

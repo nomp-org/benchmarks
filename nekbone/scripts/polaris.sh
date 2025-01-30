@@ -84,7 +84,7 @@ echo "module list" >> $SFILE
 
 CMD=.lhelper
 echo "#!/bin/bash" >$CMD
-echo "gpu_id=\$((${gpu_per_node} - 1 - \${PMI_LOCAL_RANK} % ${gpu_per_node}))" >>$CMD
+echo "gpu_id=\$((${gpus_per_node} - 1 - \${PMI_LOCAL_RANK} % ${gpus_per_node}))" >>$CMD
 echo "export CUDA_VISIBLE_DEVICES=\$gpu_id" >>$CMD
 echo "\$*" >>$CMD
 chmod 755 $CMD
