@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-: ${PROJ_ID:=""}
-: ${QUEUE:="lustre_scaling"}
+: ${PROJ_ID:="Performance"}
+: ${QUEUE:="debug"}
 : ${NEKBONE_INSTALL_DIR:=./install}
 
 ### Don't touch anything that follows this line. ###
@@ -32,11 +32,13 @@ if [ ! -f $bin ]; then
   exit 1
 fi
 
-backend=$1
+backend=${1:-"sycl"}
 order=${2:-7}
-max_iter=${3:-100}
+max_iter=${3:-200}
 time=${4:-1:00}
+num_trials=${5:-5}
 
+profile=0
 gpus_per_node=6
 tiles_per_gpu=2
 qnodes=1
@@ -62,7 +64,13 @@ echo "cd \$PBS_O_WORKDIR" >> $SFILE
 echo "echo Jobid: \$PBS_JOBID" >>$SFILE
 echo "echo Running on host \`hostname\`" >>$SFILE
 echo "echo Running on nodes \`cat \$PBS_NODEFILE\`" >>$SFILE
+if [ $profile -eq 1 ]; then
+  echo "module load thapi" >> $SFILE
+fi
 echo "module list" >> $SFILE
+
+# OCCA flags in case we are running OCCA
+echo "export OCCA_DPCPP_COMPILER_FLAGS=\"-fsycl -fsycl-targets=intel_gpu_pvc -ftarget-register-alloc-mode=pvc:auto -fma\"" >>$SFILE
 
 CMD=.lhelper
 echo "#!/bin/bash" > $CMD
@@ -72,13 +80,18 @@ echo "export ZE_AFFINITY_MASK=\$gpu_id.\$tile_id" >> $CMD
 echo "\"\$@\"" >> $CMD
 chmod u+x $CMD
 
-echo "export OCCA_DPCPP_COMPILER_FLAGS=\"-fsycl -fsycl-targets=intel_gpu_pvc -ftarget-register-alloc-mode=pvc:auto -fma\"" >>$SFILE
+DBGCMD=
+if [ $profile -eq 1 ]; then
+  DBGCMD="iprof --"
+fi
 
-for element in 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384; do
-  echo "mpiexec --no-vni -n 1 -ppn 1 -- ./${CMD} $bin --nekbone-backend=${backend} " \
+for element in 512 1024 2048 4096 8192 16384 32768 65536; do
+for ((i=0; i<num_trials; i++)); do
+  echo "mpiexec --no-vni -n 1 -ppn 1 -- ./${CMD} ${DBGCMD} $bin --nekbone-backend=${backend} " \
     "--nekbone-max-iter=${max_iter} --nekbone-order ${order} --nekbone-verbose=1 " \
     "--nekbone-scripts-dir=${NEKBONE_INSTALL_DIR}/scripts --nekbone-nelems $element" >>$SFILE
   echo "sleep 5" >>$SFILE
+done
 done
 
 qsub -q $QUEUE $SFILE
