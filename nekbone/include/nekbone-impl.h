@@ -23,7 +23,7 @@ struct nekbone_t {
   // User input to define problem size and verbosity.
   sint nelt, nx1;
   uint verbose, max_iter, device, platform;
-  char backend[BUFSIZ], scripts_dir[BUFSIZ];
+  char backend[BUFSIZ + 1], scripts_dir[BUFSIZ + 1];
   // Internal data structure for gather-scatter.
   uint gs_n, *gs_off, *gs_idx;
   // Quadrature points and weights.
