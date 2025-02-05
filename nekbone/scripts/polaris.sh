@@ -4,6 +4,7 @@ set -e
 : ${PROJ_ID:="Performance"}
 : ${QUEUE:="debug"}
 : ${NEKBONE_INSTALL_DIR:=./install}
+: ${SPACK_DIR:=${HOME}/workspace/anl/thapi/spack}
 
 ### Don't touch anything that follows this line. ###
 if [[ $# -lt 1 && $# -gt 4 ]]; then
@@ -34,7 +35,7 @@ fi
 
 backend=${1:-"cuda"}
 order=${2:-7}
-max_iter=${3:-200}
+max_iter=${3:-500}
 time=${4:-1:00}
 num_trials=${5:-5}
 
@@ -78,16 +79,21 @@ echo "module load nvhpc-mixed" >> $SFILE
 echo "module load craype-x86-milan craype-accel-nvidia80" >> $SFILE
 echo "module load spack-pe-base cmake" >> $SFILE
 if [ $profile -eq 1 ]; then
-  echo "module load thapi" >> $SFILE
+  echo ". ${SPACK_DIR}/share/spack/setup-env.sh" >> $SFILE
+  echo "spack load thapi" >> $SFILE
 fi
 echo "module list" >> $SFILE
+
+# OCCA flags in case we are running OCCA
+echo "export OCCA_CUDA_COMPILER_FLAGS=\"-w -O3 -lineinfo --use_fast_math\"" >>$SFILE
+echo "export OCCA_VERBOSE=1" >>$SFILE
 
 CMD=.lhelper
 echo "#!/bin/bash" >$CMD
 echo "gpu_id=\$((${gpus_per_node} - 1 - \${PMI_LOCAL_RANK} % ${gpus_per_node}))" >>$CMD
 echo "export CUDA_VISIBLE_DEVICES=\$gpu_id" >>$CMD
 echo "\$*" >>$CMD
-chmod 755 $CMD
+chmod u+x $CMD
 
 DBGCMD=
 if [ $profile -eq 1 ]; then
