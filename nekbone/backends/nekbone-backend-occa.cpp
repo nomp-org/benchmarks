@@ -22,8 +22,8 @@ static const size_t local_size = 512;
 static void occa_device_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "occa_device_init: initialize device ...\n");
 
-  char backend[BUFSIZ];
-  strncpy(backend, nekbone->backend, BUFSIZ);
+  char backend[BUFSIZ + 1];
+  strncpy(backend, nekbone->backend, BUFSIZ + 1);
 
   char *token = strtok(backend, ":");
   token       = strtok(NULL, ":");
@@ -73,8 +73,8 @@ static kernel k_zero, k_mask, k_glsc3, k_copy, k_add2s1, k_add2s2, k_gs, k_ax;
 
 static void occa_kernel_init(const struct nekbone_t *nekbone) {
   // Path is relative the installation directory.
-  char okl_path[BUFSIZ];
-  strncpy(okl_path, nekbone->scripts_dir, BUFSIZ);
+  char okl_path[BUFSIZ + 1];
+  strncpy(okl_path, nekbone->scripts_dir, BUFSIZ + 1);
   strncat(okl_path, "/nekbone.okl", 32);
 
   json kernel_info({{"defines/NX1", nekbone->nx1},
