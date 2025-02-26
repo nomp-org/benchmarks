@@ -27,6 +27,7 @@ static void occa_device_init(const struct nekbone_t *nekbone) {
 
   char *token = strtok(backend, ":");
   token       = strtok(NULL, ":");
+  nekbone_debug(nekbone->verbose, "occa_device_init: backend = %s\n", token);
 
   dev.setup({{"mode", token}, {"device_id", 0}, {"platform_id", 0}});
 }
