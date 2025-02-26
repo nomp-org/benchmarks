@@ -56,16 +56,17 @@
     @shared scalar s_ur[NX1][NX1][NX1], s_us[NX1][NX1][NX1];
     @shared scalar s_ut[NX1][NX1][NX1];
 
-    for (int i = 0; i < NX1; i++; @inner) {
-      for (int j = 0; j < NX1; j++; @inner) {
-        for (int k = 0; k < NX1; k++; @inner) {
+    for (int i = 0; i < NX1; i++; @inner(0)) {
+      for (int j = 0; j < NX1; j++; @inner(1)) {
+        for (int k = 0; k < NX1; k++; @inner(2)) {
           s_ur[k][j][i] = 0;
           if (k == 0) s_D[j][i] = D[NEKBONE_IDX2(i, j)];
           s_us[k][j][i] = 0;
           s_ut[k][j][i] = 0;
         }
+        @barrier;
 
-        for (int k = 0; k < NX1; k++; @inner) {
+        for (int k = 0; k < NX1; k++; @inner(2)) {
           for (uint l = 0; l < NX1; ++l) {
             s_ur[k][j][i] += s_D[i][l] * u[NEKBONE_IDX4(l, j, k, e)];
             s_us[k][j][i] += s_D[j][l] * u[NEKBONE_IDX4(i, l, k, e)];
@@ -73,7 +74,7 @@
           }
         }
 
-        for (int k = 0; k < NX1; k++; @inner) {
+        for (int k = 0; k < NX1; k++; @inner(2)) {
           const uint gbase = 6 * NEKBONE_IDX4(i, j, k, e);
           scalar     r_G00 = G[gbase + 0];
           scalar     r_G01 = G[gbase + 1];
@@ -95,7 +96,7 @@
           @barrier;
         }
 
-        for (int k = 0; k < NX1; k++; @inner) {
+        for (int k = 0; k < NX1; k++; @inner(2)) {
           scalar wo = 0;
           for (uint l = 0; l < NX1; l++) {
             wo += s_D[l][i] * s_ur[k][j][l] + s_D[l][j] * s_us[k][l][i] +
