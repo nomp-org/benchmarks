@@ -13,9 +13,6 @@ static void mem_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose,
                 "mem_init: copy problem data to device ...\n");
 
-  // We allocate following arrays used in CG on both host and device.
-  // Techinically we don't need the host arrays if we always run on the device.
-  // But in the case nomp is not enabled, we need these arrays on host.
   dofs = nekbone_get_local_dofs(nekbone);
   r    = nekbone_calloc(scalar, dofs);
   x    = nekbone_calloc(scalar, dofs);
@@ -25,8 +22,6 @@ static void mem_init(const struct nekbone_t *nekbone) {
 #pragma nomp update(alloc : r[0, dofs], x[0, dofs], z[0, dofs], p[0, dofs],    \
                         w[0, dofs])
 
-  // There is no need to allcoate following arrays on host. We just copy them
-  // into the device.
   c    = nekbone->c;
   g    = nekbone->g;
   D    = nekbone->D;
@@ -187,25 +182,20 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
 
   clock_t t0 = clock();
 
-  // Copy rhs to device buffer.
   for (uint i = 0; i < n; i++) r[i] = f[i];
 #pragma nomp update(to : r[0, n])
 
   scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
 
-  // Zero out the solution.
   zero(x, n);
 
-  // Apply Dirichlet BCs to RHS.
   mask(r, n);
 
-  // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
   scalar r0    = rnorm;
   nekbone_debug(nekbone->verbose, "nomp_run: iteration 0, rnorm = %e\n", rnorm);
   for (uint i = 0; i < nekbone->max_iter; ++i) {
-    // Preconditioner (which is just a copy for now).
     copy(z, r, n);
 
     rtz2 = rtz1;

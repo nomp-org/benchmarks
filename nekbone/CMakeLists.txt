@@ -16,6 +16,7 @@ option(ENABLE_OPENCL "Build OPENCL backend" OFF)
 option(ENABLE_CUDA "Build CUDA backend" OFF)
 option(ENABLE_HIP "Build HIP backend" OFF)
 option(ENABLE_NOMP "Build NOMP backend" OFF)
+option(ENABLE_OMP "Build OMP backend" OFF)
 
 # Build defaults:
 set(NEKBONE_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/backends/)
@@ -68,17 +69,14 @@ if (ENABLE_SYCL)
   list(APPEND SOURCES backends/nekbone-backend-sycl.cpp)
 endif()
 
+if (ENABLE_OMP)
+  list(APPEND SOURCES backends/nekbone-backend-omp.c)
+endif()
+
 add_library(nekbone SHARED ${SOURCES})
 set_target_properties(nekbone PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION 1
   PUBLIC_HEADER include/nekbone.h)
 target_include_directories(nekbone PRIVATE include)
-target_compile_options(nekbone PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>)
-# Add -Wpedantic if compiler is not MSVC and language CUDA is not enabled.
-target_compile_options(nekbone PRIVATE
-  $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:-Wpedantic>)
-# Add flags from the user.
-target_compile_options(nekbone PRIVATE "${NEKBONE_CFLAGS}")
 target_link_libraries(nekbone PRIVATE m)
 
 if (ENABLE_OCCA)

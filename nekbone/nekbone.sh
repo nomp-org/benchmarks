@@ -30,7 +30,7 @@ function print_help() {
 : ${NEKBONE_OPENCL_LIB_DIR:=}
 
 : ${NEKBONE_SYCL_FLAGS:="-fsycl -fsycl-targets=intel_gpu_pvc -ftarget-register-alloc-mode=pvc:auto -fma"}
-: ${NEKBONE_OMP_FLAGS:=""}
+: ${NEKBONE_OMP_FLAGS:="-fiopenmp -fopenmp-targets=spir64=\"-O3\""}
 
 backend_set=0
 NEKBONE_OCCA="OFF"
@@ -142,10 +142,15 @@ NEKBONE_CMAKE_CMD="cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} "\
 "-DENABLE_CUDA=${NEKBONE_CUDA} "\
 "-DENABLE_HIP=${NEKBONE_HIP} "\
 "-DENABLE_NOMP=${NEKBONE_NOMP} "\
-"-DENABLE_OPENCL=${NEKBONE_OPENCL}"
+"-DENABLE_OPENCL=${NEKBONE_OPENCL} "\
+"-DENABLE_OMP=${NEKBONE_OMP}"
 
 if [[ "${NEKBONE_SYCL}" == "ON" ]]; then
   NEKBONE_FLAGS="${NEKBONE_FLAGS} ${NEKBONE_SYCL_FLAGS}"
+fi
+
+if [[ "${NEKBONE_OMP}" == "ON" ]]; then
+  NEKBONE_FLAGS="${NEKBONE_FLAGS} ${NEKBONE_OMP_FLAGS}"
 fi
 
 if [[ "${NEKBONE_OCCA}" == "ON" ]]; then
