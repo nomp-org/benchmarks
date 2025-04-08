@@ -18,23 +18,28 @@ function print_help() {
   echo "  --enable-backend <backend> Set backend to be used for the build."
 }
 
-: ${NEKBONE_CC:=""}
-: ${NEKBONE_CFLAGS:="-O3 -g"}
+: ${NEKBONE_COMP:=""}
+: ${NEKBONE_FLAGS:="-O3 -g"}
 : ${NEKBONE_BUILD_TYPE:=RelWithDebInfo}
 : ${NEKBONE_BUILD_DIR:=`pwd`/build}
 : ${NEKBONE_INSTALL_PREFIX:=`pwd`/install}
 : ${NEKBONE_LIB_SUFFIX:=.so}
-: ${NEKBONE_OCCA:="OFF"}
-: ${NEKBONE_SYCL:="OFF"}
-: ${NEKBONE_CUDA:="OFF"}
-: ${NEKBONE_HIP:="OFF"}
-: ${NEKBONE_NOMP:="OFF"}
-: ${NEKBONE_OPENCL:="OFF"}
 
 : ${NEKBONE_OCCA_DIR:=${HOME}/libocca/occa/install}
+: ${NEKBONE_OPENCL_INC_DIR:=}
+: ${NEKBONE_OPENCL_LIB_DIR:=}
+
 : ${NEKBONE_SYCL_FLAGS:="-fsycl -fsycl-targets=intel_gpu_pvc -ftarget-register-alloc-mode=pvc:auto -fma"}
+: ${NEKBONE_OMP_FLAGS:=""}
 
 backend_set=0
+NEKBONE_OCCA="OFF"
+NEKBONE_SYCL="OFF"
+NEKBONE_CUDA="OFF"
+NEKBONE_HIP="OFF"
+NEKBONE_NOMP="OFF"
+NEKBONE_OPENCL="OFF"
+NEKBONE_OMP="OFF"
 
 function check_backend() {
   if [[ ${backend_set} -eq 1 ]]; then
@@ -68,8 +73,12 @@ function check_backend() {
       NEKBONE_OPENCL="ON"
       backend_set=1
       ;;
+    omp)
+      NEKBONE_OMP="ON"
+      backend_set=1
+      ;;
     *)
-      echo "Error: Invalid backend: $1"
+      echo "Error: invalid backend = $1"
       exit 1
       ;;
   esac
@@ -82,12 +91,12 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     --cc)
-      NEKBONE_CC="$2"
+      NEKBONE_COMP="$2"
       shift
       shift
       ;;
     --cflags)
-      NEKBONE_CFLAGS="$2"
+      NEKBONE_FLAGS="$2"
       shift
       shift
       ;;
@@ -119,8 +128,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${NEKBONE_CC}" ]]; then
-  echo "C compiler is not set."
+if [[ -z "${NEKBONE_COMP}" ]]; then
+  echo "Error: Compiler is not set!"
   exit 1
 fi
 
@@ -136,7 +145,7 @@ NEKBONE_CMAKE_CMD="cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} "\
 "-DENABLE_OPENCL=${NEKBONE_OPENCL}"
 
 if [[ "${NEKBONE_SYCL}" == "ON" ]]; then
-  NEKBONE_CFLAGS="${NEKBONE_CFLAGS} ${NEKBONE_SYCL_FLAGS}"
+  NEKBONE_FLAGS="${NEKBONE_FLAGS} ${NEKBONE_SYCL_FLAGS}"
 fi
 
 if [[ "${NEKBONE_OCCA}" == "ON" ]]; then
@@ -145,11 +154,11 @@ fi
 
 # Set the CXX compliler if we are using OCCA or SYCL.
 if [[ "${NEKBONE_OCCA}" == "ON" || "${NEKBONE_SYCL}" == "ON" ]]; then
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_COMPILER=${NEKBONE_CC}"
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_FLAGS=\"${NEKBONE_CFLAGS}\""
+  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_COMPILER=${NEKBONE_COMP}"
+  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_FLAGS=\"${NEKBONE_FLAGS}\""
 else
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_COMPILER=${NEKBONE_CC}"
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_FLAGS=\"${NEKBONE_CFLAGS}\""
+  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_COMPILER=${NEKBONE_COMP}"
+  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_FLAGS=\"${NEKBONE_FLAGS}\""
 fi
 
 
