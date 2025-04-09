@@ -39,7 +39,7 @@ max_iter=${3:-500}
 time=${4:-1:00}
 num_trials=${5:-5}
 
-profile=0
+profile=1
 gpus_per_node=4
 tiles_per_gpu=1
 qnodes=1

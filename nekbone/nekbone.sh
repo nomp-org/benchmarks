@@ -18,8 +18,10 @@ function print_help() {
   echo "  --enable-backend <backend> Set backend to be used for the build."
 }
 
-: ${NEKBONE_COMP:=""}
-: ${NEKBONE_FLAGS:="-O3 -g"}
+: ${NEKBONE_CC:="icx"}
+: ${NEKBONE_CFLAGS:="-O3 -g"}
+: ${NEKBONE_CXX:="icpx"}
+: ${NEKBONE_CXXFLAGS:="-O3 -g"}
 : ${NEKBONE_BUILD_TYPE:=RelWithDebInfo}
 : ${NEKBONE_BUILD_DIR:=`pwd`/build}
 : ${NEKBONE_INSTALL_PREFIX:=`pwd`/install}
@@ -91,12 +93,22 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     --cc)
-      NEKBONE_COMP="$2"
+      NEKBONE_CC="$2"
       shift
       shift
       ;;
     --cflags)
-      NEKBONE_FLAGS="$2"
+      NEKBONE_CFLAGS="$2"
+      shift
+      shift
+      ;;
+    --cxx)
+      NEKBONE_CXX="$2"
+      shift
+      shift
+      ;;
+    --cxxflags)
+      NEKBONE_CXXFLAGS="$2"
       shift
       shift
       ;;
@@ -128,7 +140,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${NEKBONE_COMP}" ]]; then
+if [[ -z "${NEKBONE_CC}" ]]; then
   echo "Error: Compiler is not set!"
   exit 1
 fi
@@ -146,26 +158,21 @@ NEKBONE_CMAKE_CMD="cmake -S ${PWD} -B ${NEKBONE_BUILD_DIR} "\
 "-DENABLE_OMP=${NEKBONE_OMP}"
 
 if [[ "${NEKBONE_SYCL}" == "ON" ]]; then
-  NEKBONE_FLAGS="${NEKBONE_FLAGS} ${NEKBONE_SYCL_FLAGS}"
+  NEKBONE_CXXFLAGS="${NEKBONE_CXXFLAGS} ${NEKBONE_SYCL_FLAGS}"
 fi
 
 if [[ "${NEKBONE_OMP}" == "ON" ]]; then
-  NEKBONE_FLAGS="${NEKBONE_FLAGS} ${NEKBONE_OMP_FLAGS}"
+  NEKBONE_CFLAGS="${NEKBONE_CFLAGS} ${NEKBONE_OMP_FLAGS}"
 fi
 
 if [[ "${NEKBONE_OCCA}" == "ON" ]]; then
   NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_PREFIX_PATH=${NEKBONE_OCCA_DIR}"
 fi
 
-# Set the CXX compliler if we are using OCCA or SYCL.
-if [[ "${NEKBONE_OCCA}" == "ON" || "${NEKBONE_SYCL}" == "ON" ]]; then
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_COMPILER=${NEKBONE_COMP}"
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_FLAGS=\"${NEKBONE_FLAGS}\""
-else
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_COMPILER=${NEKBONE_COMP}"
-  NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_FLAGS=\"${NEKBONE_FLAGS}\""
-fi
-
+NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_COMPILER=${NEKBONE_CXX}"
+NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_CXX_FLAGS=\"${NEKBONE_CXXFLAGS}\""
+NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_COMPILER=${NEKBONE_CC}"
+NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DCMAKE_C_FLAGS=\"${NEKBONE_CFLAGS}\""
 
 if [[ "${NEKBONE_OPENCL}" == "ON" ]]; then
   NEKBONE_CMAKE_CMD="${NEKBONE_CMAKE_CMD} -DOpenCL_INCLUDE_DIR=${NEKBONE_OPENCL_INC_DIR}"

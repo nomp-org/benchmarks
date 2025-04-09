@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.27)
-project(nekbone VERSION 0.0.1 DESCRIPTION "" LANGUAGES C)
+project(nekbone VERSION 0.0.1 DESCRIPTION "")
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
@@ -29,7 +29,11 @@ configure_file(${CMAKE_SOURCE_DIR}/include/nekbone-defs.h.in
   ${CMAKE_SOURCE_DIR}/include/nekbone-defs.h @ONLY)
 
 set(SOURCES src/nekbone-api.c src/nekbone-setup.c src/nekbone-backend.c
-  backends/nekbone-backend-dummy.c backends/nekbone-backend-nomp.c)
+  backends/nekbone-backend-dummy.c)
+
+if (ENABLE_NOMP)
+  list(APPEND SOURCES backends/nekbone-backend-nomp.c)
+endif()
 
 if (ENABLE_OCCA)
   find_package(OCCA REQUIRED)
@@ -100,8 +104,7 @@ if (ENABLE_NOMP)
   target_link_options(nekbone PRIVATE -Wl,-rpath,$ENV{NOMP_INSTALL_DIR}/lib
     -L$ENV{NOMP_INSTALL_DIR}/lib -lnomp)
 else()
-  target_compile_options(nekbone PRIVATE -Wno-unknown-pragmas
-    -Wno-unused-parameter -Wno-unused-variable)
+  target_compile_options(nekbone PRIVATE -Wno-unused-parameter -Wno-unused-variable)
 endif()
 
 if (ENABLE_SYCL OR ENABLE_OCCA)
