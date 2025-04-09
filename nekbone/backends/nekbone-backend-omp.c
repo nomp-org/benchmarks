@@ -100,71 +100,65 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
   }
 }
 
-inline static void ax(const int nelt, const int nx1,
-                      scalar       w[nelt][nx1][nx1][nx1],
-                      const scalar u[nelt][nx1][nx1][nx1],
-                      const scalar G[nelt][nx1][nx1][nx1][6],
-                      const scalar D[nx1][nx1]) {
-  scalar ur[nx1][nx1][nx1];
-  scalar us[nx1][nx1][nx1];
-  scalar ut[nx1][nx1][nx1];
+#define NX1 2
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
 
-  int    i, j, k;
-  scalar r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
-  scalar wr, ws, wt;
-  scalar wo;
+#define NX1 3
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
 
-  const int nx2 = nx1 * nx1;
-  const int nx3 = nx1 * nx2;
-#pragma omp target teams distribute thread_limit(nx3) private(D, ur, us, ut)
-  for (int e = 0; e < nelt; e++) {
-#pragma omp parallel for private(i, j, k)
-    for (int inner = 0; inner < nx3; inner++) {
-      k           = inner / nx2;
-      j           = (inner - k * nx2) / nx1;
-      i           = inner - k * nx2 - j * nx1;
-      ur[k][j][i] = 0;
-      us[k][j][i] = 0;
-      ut[k][j][i] = 0;
-      for (int l = 0; l < nx1; l++) {
-        ur[k][j][i] += D[i][l] * u[e][k][j][l];
-        us[k][j][i] += D[j][l] * u[e][k][l][i];
-        ut[k][j][i] += D[k][l] * u[e][l][j][i];
-      }
-    }
+#define NX1 4
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
 
-#pragma omp parallel for private(i, j, k) private(                             \
-        r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, wr, ws, wt)
-    for (int inner = 0; inner < nx3; inner++) {
-      k     = inner / nx2;
-      j     = (inner - k * nx2) / nx1;
-      i     = inner - k * nx2 - j * nx1;
-      r_G00 = G[e][k][j][i][0];
-      r_G01 = G[e][k][j][i][1];
-      r_G02 = G[e][k][j][i][2];
-      r_G11 = G[e][k][j][i][3];
-      r_G12 = G[e][k][j][i][4];
-      r_G22 = G[e][k][j][i][5];
-      wr    = r_G00 * ur[k][j][i] + r_G01 * us[k][j][i] + r_G02 * ut[k][j][i];
-      ws    = r_G01 * ur[k][j][i] + r_G11 * us[k][j][i] + r_G12 * ut[k][j][i];
-      wt    = r_G02 * ur[k][j][i] + r_G12 * us[k][j][i] + r_G22 * ut[k][j][i];
-      ur[k][j][i] = wr;
-      us[k][j][i] = ws;
-      ut[k][j][i] = wt;
-    }
+#define NX1 5
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
 
-#pragma omp parallel for private(i, j, k) private(wo)
-    for (int inner = 0; inner < nx3; inner++) {
-      k  = inner / nx2;
-      j  = (inner - k * nx2) / nx1;
-      i  = inner - k * nx2 - j * nx1;
-      wo = 0;
-      for (int l = 0; l < nx1; l++) {
-        wo += D[l][i] * ur[k][j][l] + D[l][j] * us[k][l][i] +
-              D[l][k] * ut[l][j][i];
-      }
-      w[e][k][j][i] = wo;
-    }
+#define NX1 6
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+#define NX1 7
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+#define NX1 8
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+#define NX1 9
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+#define NX1 10
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+#define NX1 11
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+#define NX1 12
+#include "nekbone-backend-omp-ax.h"
+#undef NX1
+
+inline static void ax(scalar *w, const scalar *u, const scalar *G,
+                      const scalar *D, const int nelt, const int nx1) {
+  switch (nx1) {
+  case 2: ax_kernel_v00_2(w, u, g, D, nelt); break;
+  case 3: ax_kernel_v00_3(w, u, g, D, nelt); break;
+  case 4: ax_kernel_v00_4(w, u, g, D, nelt); break;
+  case 5: ax_kernel_v00_5(w, u, g, D, nelt); break;
+  case 6: ax_kernel_v00_6(w, u, g, D, nelt); break;
+  case 7: ax_kernel_v00_7(w, u, g, D, nelt); break;
+  case 8: ax_kernel_v00_8(w, u, g, D, nelt); break;
+  case 9: ax_kernel_v00_9(w, u, g, D, nelt); break;
+  case 10: ax_kernel_v00_10(w, u, g, D, nelt); break;
+  case 11: ax_kernel_v00_11(w, u, g, D, nelt); break;
+  case 12: ax_kernel_v00_12(w, u, g, D, nelt); break;
+  default: break;
   }
 }
 
@@ -176,20 +170,25 @@ static scalar omp_run(const struct nekbone_t *nekbone, const scalar *f) {
 
   clock_t t0 = clock();
 
+  // Copy rhs to device buffer.
   for (uint i = 0; i < n; i++) r[i] = f[i];
 #pragma omp target update to(r[0 : n])
 
   scalar pap  = 0;
   scalar rtz1 = 1, rtz2 = 0;
 
+  // Zero out the solution.
   zero(x, n);
 
+  // Apply Dirichlet BCs to RHS.
   mask(r, n);
 
+  // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
-  scalar r0    = rnorm;
   nekbone_debug(nekbone->verbose, "omp_run: iteration 0, rnorm = %e\n", rnorm);
+  scalar r0 = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
+    // Preconditioner (which is just a copy for now).
     copy(z, r, n);
 
     rtz2 = rtz1;
@@ -199,9 +198,7 @@ static scalar omp_run(const struct nekbone_t *nekbone, const scalar *f) {
     if (i == 0) beta = 0;
     add2s1(p, z, beta, n);
 
-    ax(nelt, nx1, (scalar(*)[nx1][nx1][nx1])w,
-       (const scalar(*)[nx1][nx1][nx1])p, (const scalar(*)[nx1][nx1][nx1][6])g,
-       (const scalar(*)[nx1])D);
+    ax(w, p, g, D, nelt, nx1);
     gs(w, gs_off, gs_idx, gs_n);
     add2s2(w, p, 0.1, n);
     mask(w, n);
