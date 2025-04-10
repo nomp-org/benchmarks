@@ -113,7 +113,7 @@ static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
           auto &s_us = *(sycl::ext::oneapi::group_local_memory_for_overwrite<
                          scalar[nx1][nx1][nx1]>(id.get_group()));
           auto &s_D  = *(sycl::ext::oneapi::group_local_memory_for_overwrite<
-                        scalar[nx1][nx1]>(id.get_group()));
+                         scalar[nx1][nx1]>(id.get_group()));
 
           const uint e = id.get_group(0);
           const uint i = id.get_local_id(0);
