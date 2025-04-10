@@ -26,10 +26,7 @@ inline static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
 
   // clang-format off
 #pragma omp target teams distribute num_teams(nelt) thread_limit(NX3) \
-  private(s_D, s_ur, s_us, s_ut) \
-  private(i, j, k, l, inner, e) \
-  private(wr, ws, wt, wo) \
-  private(r_G00, r_G01, r_G02, r_G11, r_G12,r_G22)
+  private(s_D, s_ur, s_us, s_ut)
   // clang-format on
   for (e = 0; e < nelt; e++) {
 #pragma omp parallel for private(i, j, k, inner)
@@ -41,8 +38,11 @@ inline static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
       if (k == 0) s_D[j][i] = D[IDX2(i, j)];
     }
 
-#pragma omp parallel for private(i, j, k, l, inner, e, wr, ws, wt)
+#pragma omp parallel for private(i, j, k, l, inner, wr, ws, wt)
     for (inner = 0; inner < NX3; inner++) {
+      k  = inner / NX2;
+      j  = (inner - k * NX2) / NX1;
+      i  = inner - k * NX2 - j * NX1;
       wr = 0;
       ws = 0;
       wt = 0;
@@ -57,8 +57,10 @@ inline static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
       s_ut[k][j][i] = wt;
     }
 
-#pragma omp parallel for private(i, j, k, l, inner, e, wr, ws, wt) private(    \
-        r_G00, r_G01, r_G02, r_G11, r_G12, r_G22)
+    // clang-format off
+#pragma omp parallel for private(i, j, k, l, inner, wr, ws, wt) \
+    private(r_G00, r_G01, r_G02, r_G11, r_G12, r_G22)
+    // clang-format on
     for (inner = 0; inner < NX3; inner++) {
       k = inner / NX2;
       j = (inner - k * NX2) / NX1;
@@ -84,7 +86,7 @@ inline static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
       s_ut[k][j][i] = wt;
     }
 
-#pragma omp parallel for private(i, j, k, l, inner, e, wo)
+#pragma omp parallel for private(i, j, k, l, inner, wo)
     for (inner = 0; inner < NX3; inner++) {
       k = inner / NX2;
       j = (inner - k * NX2) / NX1;
@@ -177,7 +179,7 @@ inline static void ax_kernel(scalar *w, const scalar *u, const scalar *G,
       }
     }
 
-#pragma omp parallel for private(i, j, k, l, wo)
+#pragma omp parallel for collapse(3) private(i, j, k, l, wo)
     for (k = 0; k < NX1; k++) {
       for (j = 0; j < NX1; j++) {
         for (i = 0; i < NX1; i++) {
