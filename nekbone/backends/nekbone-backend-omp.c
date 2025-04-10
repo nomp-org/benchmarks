@@ -147,17 +147,17 @@ inline static void gs(scalar *v, const uint *gs_off, const uint *gs_idx,
 inline static void ax(scalar *w, const scalar *u, const scalar *G,
                       const scalar *D, const int nelt, const int nx1) {
   switch (nx1) {
-  case 2: ax_kernel_v00_2(w, u, g, D, nelt); break;
-  case 3: ax_kernel_v00_3(w, u, g, D, nelt); break;
-  case 4: ax_kernel_v00_4(w, u, g, D, nelt); break;
-  case 5: ax_kernel_v00_5(w, u, g, D, nelt); break;
-  case 6: ax_kernel_v00_6(w, u, g, D, nelt); break;
-  case 7: ax_kernel_v00_7(w, u, g, D, nelt); break;
-  case 8: ax_kernel_v00_8(w, u, g, D, nelt); break;
-  case 9: ax_kernel_v00_9(w, u, g, D, nelt); break;
-  case 10: ax_kernel_v00_10(w, u, g, D, nelt); break;
-  case 11: ax_kernel_v00_11(w, u, g, D, nelt); break;
-  case 12: ax_kernel_v00_12(w, u, g, D, nelt); break;
+  case 2: ax_kernel_2(w, u, g, D, nelt); break;
+  case 3: ax_kernel_3(w, u, g, D, nelt); break;
+  case 4: ax_kernel_4(w, u, g, D, nelt); break;
+  case 5: ax_kernel_5(w, u, g, D, nelt); break;
+  case 6: ax_kernel_6(w, u, g, D, nelt); break;
+  case 7: ax_kernel_7(w, u, g, D, nelt); break;
+  case 8: ax_kernel_8(w, u, g, D, nelt); break;
+  case 9: ax_kernel_9(w, u, g, D, nelt); break;
+  case 10: ax_kernel_10(w, u, g, D, nelt); break;
+  case 11: ax_kernel_11(w, u, g, D, nelt); break;
+  case 12: ax_kernel_12(w, u, g, D, nelt); break;
   default: break;
   }
 }
