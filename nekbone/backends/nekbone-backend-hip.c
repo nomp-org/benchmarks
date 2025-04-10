@@ -195,7 +195,7 @@ static scalar hip_run(const struct nekbone_t *nekbone, const scalar *r) {
 
     scalar rtr = glsc3(d_r, d_c, d_r, n);
     rnorm      = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "hip_run: iteration %d, rnorm = %e\n",
+    nekbone_debug(nekbone->verbose - 1, "hip_run: iteration %d, rnorm = %e\n",
                   i + 1, rnorm);
   }
   check_runtime(hipDeviceSynchronize());

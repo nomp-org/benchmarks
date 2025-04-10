@@ -646,7 +646,7 @@ static scalar opencl_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(&r_mem, &w_mem, -alpha, n);
 
     rnorm = sqrt(glsc3(&r_mem, &c_mem, &r_mem, n));
-    nekbone_debug(nekbone->verbose, "opencl_run: iteration %d, rnorm = %e\n",
+    nekbone_debug(nekbone->verbose - 1, "opencl_run: iteration %d, rnorm = %e\n",
                   i + 1, rnorm);
   }
   check(clFinish(ocl_queue), "clFinish(cg)");

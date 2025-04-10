@@ -249,7 +249,7 @@ static scalar sycl_run(const struct nekbone_t *nekbone, const scalar *r) {
     add2s2(d_r, d_w, -alpha, n);
 
     rnorm = std::sqrt(glsc3(d_r, d_c, d_r, n));
-    nekbone_debug(nekbone->verbose, "sycl_run: iteration %d, rnorm = %e\n",
+    nekbone_debug(nekbone->verbose - 1, "sycl_run: iteration %d, rnorm = %e\n",
                   i + 1, rnorm);
   }
 

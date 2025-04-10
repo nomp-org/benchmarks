@@ -220,7 +220,7 @@ static scalar _nomp_run(const struct nekbone_t *nekbone, const scalar *f) {
 
     scalar rtr = glsc3(r, c, r, n);
     rnorm      = sqrt(rtr);
-    nekbone_debug(nekbone->verbose, "nomp_run: iteration %d, rnorm = %e\n",
+    nekbone_debug(nekbone->verbose - 1, "nomp_run: iteration %d, rnorm = %e\n",
                   i + 1, rnorm);
   }
 #pragma nomp sync

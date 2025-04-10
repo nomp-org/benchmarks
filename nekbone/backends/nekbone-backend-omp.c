@@ -185,7 +185,7 @@ static scalar omp_run(const struct nekbone_t *nekbone, const scalar *f) {
 
   // Run CG on the device.
   scalar rnorm = sqrt(glsc3(r, c, r, n));
-  nekbone_debug(nekbone->verbose, "omp_run: iteration 0, rnorm = %e\n", rnorm);
+  nekbone_debug(nekbone->verbose - 1, "omp_run: iteration 0, rnorm = %e\n", rnorm);
   scalar r0 = rnorm;
   for (uint i = 0; i < nekbone->max_iter; ++i) {
     // Preconditioner (which is just a copy for now).
