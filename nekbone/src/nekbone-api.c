@@ -171,14 +171,16 @@ double nekbone_run(const struct nekbone_t *nekbone) {
   nekbone_inverse_multiplicity(r, nekbone);
 
   // Warmup the backend.
-  nekbone_run_backend(nekbone, r);
+  double elapsed = nekbone_run_backend(nekbone, r);
+  nekbone_debug(nekbone->verbose, "nekbone_run: done. warmup elapsed = %e\n",
+                elapsed);
 
   // Solve the system.
-  double elapsed = nekbone_run_backend(nekbone, r);
+  elapsed = nekbone_run_backend(nekbone, r);
+  nekbone_debug(nekbone->verbose, "nekbone_run: done. benchmark elapsed = %e\n",
+                elapsed);
+
   nekbone_free(&r);
-
-  nekbone_debug(nekbone->verbose, "nekbone_run: done. Elapsed = %e\n", elapsed);
-
   return elapsed;
 }
 
