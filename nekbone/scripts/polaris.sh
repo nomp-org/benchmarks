@@ -7,8 +7,8 @@ set -e
 : ${SPACK_DIR:=${HOME}/workspace/anl/thapi/spack}
 
 ### Don't touch anything that follows this line. ###
-if [[ $# -lt 1 && $# -gt 4 ]]; then
-  echo "Usage: [PROJ_ID=value] $0 <backend> <order> <max_iter> <hh:mm>"
+if [[ $# -gt 6 ]]; then
+  echo "Usage: [PROJ_ID=value] $0 <backend> <order> <profile=0/1> <num_trials> <max_iter> <hh:mm>"
   exit 1
 fi
 
@@ -35,14 +35,14 @@ fi
 
 backend=${1:-"cuda"}
 order=${2:-7}
-max_iter=${3:-500}
-time=${4:-1:00}
-num_trials=${5:-5}
+profile=${3:-0}
+num_trials=${4:-5}
+max_iter=${5:-500}
+time=${6:-1:00}
 
-profile=1
 gpus_per_node=4
 tiles_per_gpu=1
-qnodes=1
+nodes=1
 backend_=${backend/:/_}
 
 #--------------------------------------
@@ -55,7 +55,7 @@ echo "#PBS -q $QUEUE" >>$SFILE
 echo "#PBS -N nekbone_${backend_}" >>$SFILE
 echo "#PBS -l walltime=${time}:00" >>$SFILE
 echo "#PBS -l filesystems=home:eagle:grand" >>$SFILE
-echo "#PBS -l select=$qnodes:system=polaris" >>$SFILE
+echo "#PBS -l select=$nodes:system=polaris" >>$SFILE
 echo "#PBS -l place=scatter" >>$SFILE
 echo "#PBS -k doe" >>$SFILE
 echo "#PBS -j eo" >>$SFILE
@@ -74,7 +74,7 @@ echo "ulimit -s unlimited " >>$SFILE
 echo "module use /soft/modulefiles" >> $SFILE
 echo "module use /opt/cray/pe/lmod/modulefiles/mix_compilers" >> $SFILE
 echo "module load libfabric" >> $SFILE
-echo "module load PrgEnv-gnu" >> $SFILE
+echo "module load PrgEnv-nvhpc" >> $SFILE
 echo "module load nvhpc-mixed" >> $SFILE
 echo "module load craype-x86-milan craype-accel-nvidia80" >> $SFILE
 echo "module load spack-pe-base cmake" >> $SFILE
@@ -100,9 +100,9 @@ if [ $profile -eq 1 ]; then
   DBGCMD="iprof --"
 fi
 
-for element in 512 1024 2048 4096 8192 16384 32768 65536; do
+for element in 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536; do
 for ((i=0; i<num_trials; i++)); do
-  echo "mpiexec --no-vni -n 1 -ppn 1 -- ./${CMD} ${DBGCMD} $bin --nekbone-backend=${backend} " \
+  echo "mpiexec -n 1 -ppn 1 -- ./${CMD} ${DBGCMD} $bin --nekbone-backend=${backend} " \
     "--nekbone-max-iter=${max_iter} --nekbone-order ${order} --nekbone-verbose=1 " \
     "--nekbone-scripts-dir=${NEKBONE_INSTALL_DIR}/scripts --nekbone-nelems $element" >>$SFILE
   echo "sleep 5" >>$SFILE
