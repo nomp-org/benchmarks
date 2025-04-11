@@ -84,7 +84,7 @@ static void nekbone_parse_opts(struct nekbone_t *nekbone, int *argc,
   if (nekbone->nx1 < 2)
     nekbone_error(
         "nekbone_parse_opts: --nekbone-order is not provided or invalid.\n");
-  if (strnlen(nekbone->backend, BUFSIZ) < 1)
+  if (strlen(nekbone->backend) < 1)
     nekbone_error(
         "nekbone_parse_opts: --nekbone-backend is not provided or invalid.\n");
 

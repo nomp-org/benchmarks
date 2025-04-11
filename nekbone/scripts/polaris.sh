@@ -5,6 +5,7 @@ set -e
 : ${QUEUE:="debug"}
 : ${NEKBONE_INSTALL_DIR:=./install}
 : ${SPACK_DIR:=${HOME}/workspace/anl/thapi/spack}
+: ${NOMP_INSTALL_DIR:-$HOME/.nomp}
 
 ### Don't touch anything that follows this line. ###
 if [[ $# -gt 6 ]]; then
@@ -83,6 +84,9 @@ if [ $profile -eq 1 ]; then
   echo "spack load thapi" >> $SFILE
 fi
 echo "module list" >> $SFILE
+
+# Nomp flags in case we are running nomp
+echo "export NOMP_INSTALL_DIR=$NOMP_INSTALL_DIR" >>$SFILE
 
 # OCCA flags in case we are running OCCA
 echo "export OCCA_CUDA_COMPILER_FLAGS=\"-w -O3 -lineinfo --use_fast_math\"" >>$SFILE

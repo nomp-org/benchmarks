@@ -52,12 +52,12 @@ void nekbone_init_backend(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "nekbone_init_backend: ...\n");
 
   char         backend[BUFSIZ];
-  const size_t len = strnlen(nekbone->backend, BUFSIZ);
+  const size_t len = strlen(nekbone->backend);
   for (size_t i = 0; i < len; i++) backend[i] = toupper(nekbone->backend[i]);
   backend[len] = '\0';
 
   for (uint i = 0; i < backends_count; i++) {
-    const size_t len = strnlen(backends[i]->name, BUFSIZ);
+    const size_t len = strlen(backends[i]->name);
     if (strncmp(backends[i]->name, backend, len) != 0) continue;
     backends[i]->initialize(nekbone);
     nekbone_debug(nekbone->verbose, "nekbone_init_backend: %s done.\n",
