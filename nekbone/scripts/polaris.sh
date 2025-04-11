@@ -48,7 +48,6 @@ backend_=${backend/:/_}
 
 #--------------------------------------
 # Generate the submission script
-# sbatch
 SFILE=s.bin
 echo "#!/bin/bash" > $SFILE
 echo "#PBS -A $PROJ_ID" >>$SFILE
@@ -90,7 +89,6 @@ echo "export NOMP_INSTALL_DIR=$NOMP_INSTALL_DIR" >>$SFILE
 
 # OCCA flags in case we are running OCCA
 echo "export OCCA_CUDA_COMPILER_FLAGS=\"-w -O3 -lineinfo --use_fast_math\"" >>$SFILE
-echo "export OCCA_VERBOSE=1" >>$SFILE
 
 CMD=.lhelper
 echo "#!/bin/bash" >$CMD
