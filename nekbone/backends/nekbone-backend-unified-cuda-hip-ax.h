@@ -23,17 +23,21 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
   __shared__ scalar s_us[NX1][NX1][NX1];
   __shared__ scalar s_ut[NX1][NX1][NX1];
 
-  s_ur[k][j][i] = 0;
   if (k == 0) s_D[j][i] = D[IDX2(i, j)];
-  s_us[k][j][i] = 0;
-  s_ut[k][j][i] = 0;
+  scalar wr = 0;
+  scalar ws = 0;
+  scalar wt = 0;
   __syncthreads();
 
   for (uint l = 0; l < NX1; ++l) {
-    s_ur[k][j][i] += s_D[i][l] * u[IDX4(l, j, k, e)];
-    s_us[k][j][i] += s_D[j][l] * u[IDX4(i, l, k, e)];
-    s_ut[k][j][i] += s_D[k][l] * u[IDX4(i, j, l, e)];
+    wr += s_D[i][l] * u[IDX4(l, j, k, e)];
+    ws += s_D[j][l] * u[IDX4(i, l, k, e)];
+    wt += s_D[k][l] * u[IDX4(i, j, l, e)];
   }
+
+  s_ur[k][j][i] = wr;
+  s_us[k][j][i] = ws;
+  s_ut[k][j][i] = wt;
   __syncthreads();
 
   const uint gbase = 6 * IDX4(i, j, k, e);
@@ -44,12 +48,9 @@ __global__ static void __launch_bounds__(NX1 *NX1 *NX1)
   scalar     r_G12 = G[gbase + 4];
   scalar     r_G22 = G[gbase + 5];
 
-  scalar wr =
-      r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] + r_G02 * s_ut[k][j][i];
-  scalar ws =
-      r_G01 * s_ur[k][j][i] + r_G11 * s_us[k][j][i] + r_G12 * s_ut[k][j][i];
-  scalar wt =
-      r_G02 * s_ur[k][j][i] + r_G12 * s_us[k][j][i] + r_G22 * s_ut[k][j][i];
+  wr = r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] + r_G02 * s_ut[k][j][i];
+  ws = r_G01 * s_ur[k][j][i] + r_G11 * s_us[k][j][i] + r_G12 * s_ut[k][j][i];
+  wt = r_G02 * s_ur[k][j][i] + r_G12 * s_us[k][j][i] + r_G22 * s_ut[k][j][i];
   __syncthreads();
 
   s_ur[k][j][i] = wr;

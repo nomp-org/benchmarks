@@ -120,16 +120,21 @@ static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
           const uint j = id.get_local_id(1);
           const uint k = id.get_local_id(2);
 
-          s_ur[k][j][i] = 0;
           if (k == 0) s_D[j][i] = D[NEKBONE_IDX2(i, j)];
-          s_us[k][j][i] = 0;
-          s_ut[k][j][i] = 0;
+          scalar wr = 0;
+          scalar ws = 0;
+          scalar wt = 0;
+          id.barrier(access::fence_space::local_space);
 
           for (uint l = 0; l < nx1; l++) {
-            s_ur[k][j][i] += s_D[i][l] * u[NEKBONE_IDX4(l, j, k, e)];
-            s_us[k][j][i] += s_D[j][l] * u[NEKBONE_IDX4(i, l, k, e)];
-            s_ut[k][j][i] += s_D[k][l] * u[NEKBONE_IDX4(i, j, l, e)];
+            wr += s_D[i][l] * u[NEKBONE_IDX4(l, j, k, e)];
+            ws += s_D[j][l] * u[NEKBONE_IDX4(i, l, k, e)];
+            wt += s_D[k][l] * u[NEKBONE_IDX4(i, j, l, e)];
           }
+          s_ur[k][j][i] = wr;
+          s_us[k][j][i] = ws;
+          s_ut[k][j][i] = wt;
+          id.barrier(access::fence_space::local_space);
 
           const uint gbase = 6 * NEKBONE_IDX4(i, j, k, e);
           scalar     r_G00 = G[gbase + 0];
@@ -139,12 +144,12 @@ static void ax_(scalar *w, const scalar *u, const scalar *G, const scalar *D,
           scalar     r_G12 = G[gbase + 4];
           scalar     r_G22 = G[gbase + 5];
 
-          scalar wr = r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] +
-                      r_G02 * s_ut[k][j][i];
-          scalar ws = r_G01 * s_ur[k][j][i] + r_G11 * s_us[k][j][i] +
-                      r_G12 * s_ut[k][j][i];
-          scalar wt = r_G02 * s_ur[k][j][i] + r_G12 * s_us[k][j][i] +
-                      r_G22 * s_ut[k][j][i];
+          wr = r_G00 * s_ur[k][j][i] + r_G01 * s_us[k][j][i] +
+               r_G02 * s_ut[k][j][i];
+          ws = r_G01 * s_ur[k][j][i] + r_G11 * s_us[k][j][i] +
+               r_G12 * s_ut[k][j][i];
+          wt = r_G02 * s_ur[k][j][i] + r_G12 * s_us[k][j][i] +
+               r_G22 * s_ut[k][j][i];
           id.barrier(access::fence_space::local_space);
 
           s_ur[k][j][i] = wr;
