@@ -22,8 +22,8 @@ static const size_t local_size = 512;
 static void occa_device_init(const struct nekbone_t *nekbone) {
   nekbone_debug(nekbone->verbose, "occa_device_init: initialize device ...\n");
 
-  char backend[BUFSIZ + 1];
-  strncpy(backend, nekbone->backend, BUFSIZ + 1);
+  char backend[BUFSIZ];
+  strncpy(backend, nekbone->backend, BUFSIZ);
 
   char *token = strtok(backend, ":");
   token       = strtok(NULL, ":");

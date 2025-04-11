@@ -1,5 +1,7 @@
 #include "nekbone-backend.h"
 
+#include <string.h>
+
 static uint initialized = 0;
 
 static scalar       *r, *x, *z, *p, *w;
@@ -47,9 +49,16 @@ static void _nomp_init(const struct nekbone_t *nekbone) {
   snprintf(device, BUFSIZ, "%u", nekbone->device);
   snprintf(platform, BUFSIZ, "%u", nekbone->platform);
 
+  char backend[BUFSIZ];
+  strncpy(backend, nekbone->backend, BUFSIZ);
+
+  char *token = strtok(backend, ":");
+  token = strtok(NULL, ":");
+  nekbone_debug(nekbone->verbose, "nomp_init: backend = %s\n", token);
+
   const int argc   = 10;
   char     *argv[] = {"--nomp-device",      device,
-                      "--nomp-backend",     "hip",
+                      "--nomp-backend",     token,
                       "--nomp-verbose",     verbose,
                       "--nomp-platform",    platform,
                       "--nomp-scripts-dir", NEKBONE_SCRIPTS_DIR};

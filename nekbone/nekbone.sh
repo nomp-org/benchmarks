@@ -51,7 +51,7 @@ function check_backend() {
   backend=$1
   backend=$( echo ${backend} | awk '{ print tolower($0) }' )
   case ${backend} in
-    occa)
+    occa*)
       NEKBONE_OCCA="ON"
       backend_set=1
       ;;
@@ -67,7 +67,7 @@ function check_backend() {
       NEKBONE_HIP="ON"
       backend_set=1
       ;;
-    nomp)
+    nomp*)
       NEKBONE_NOMP="ON"
       backend_set=1
       ;;
